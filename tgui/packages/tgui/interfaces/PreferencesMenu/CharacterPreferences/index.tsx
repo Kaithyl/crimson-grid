@@ -13,6 +13,7 @@ import { QuirkPersonalityPage } from './QuirksPage';
 import { SplatsPage } from './SplatsPage'; // DARKPACK EDIT CHANGE - SPLATS
 import { StatsPage } from './Stats'; // DARKPACK EDIT ADD
 import { DisciplinesPage } from './DisciplinesPage'; // DARKPACK EDIT ADD
+import { TrueMagickPage } from './TrueMagickPage'; // CRIMSONGRID EDIT ADD
 
 enum Page {
   Antags,
@@ -23,6 +24,7 @@ enum Page {
   Loadout,
   Stats, // DARKPACK EDIT ADD
   Disciplines, // DARKPACK EDIT ADD
+  TrueMagick, // CRIMSONGRID EDIT ADD
 }
 
 type ProfileProps = {
@@ -121,6 +123,12 @@ export function CharacterPreferenceWindow(props) {
       break;
     // DARKPACK EDIT ADD END
 
+    // CRIMSONGRID EDIT ADD START - Mage Stats
+    case Page.TrueMagick:
+      pageContents = <TrueMagickPage />
+      break;
+    // CRIMSONGRID EDIT ADD END
+
     default:
       exhaustiveCheck(currentPage);
   }
@@ -184,6 +192,26 @@ export function CharacterPreferenceWindow(props) {
           )}
           {
             // DARKPACK EDIT END
+          }
+
+          {
+            // CRIMSONGRID EDIT ADD START - Mage Stats
+          }
+          {['splat_willworker', 'splat_technocrat'].includes(
+            data.character_preferences.misc.splats,
+          ) && (
+            <Stack.Item grow>
+              <PageButton
+                currentPage={currentPage}
+                page={Page.TrueMagick}
+                setPage={setCurrentPage}
+              >
+                True Magick
+              </PageButton>
+            </Stack.Item>
+          )}
+          {
+            // CRIMSONGRID EDIT END
           }
 
           <Stack.Item grow>

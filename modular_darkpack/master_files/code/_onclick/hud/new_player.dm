@@ -15,6 +15,10 @@
 	if(new_player?.ready == PLAYER_NOT_READY)
 		if(!new_player.check_discipline_warning())
 			return
+		// CRIMSONGRID EDIT ADD START - MAGE
+		if(!new_player.check_sphere_warning())
+			return
+		// CRIMSONGRID EDIT ADD END
 	return ..()
 
 /atom/movable/screen/lobby/button/join
@@ -24,6 +28,8 @@
 /atom/movable/screen/lobby/button/join/Click(location, control, params)
 	var/mob/dead/new_player/new_player = hud.mymob
 	if(!new_player?.check_discipline_warning())
+		return
+	if(!new_player.check_sphere_warning())
 		return
 	return ..()
 

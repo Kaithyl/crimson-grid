@@ -41,6 +41,11 @@
 	/// How many freebie points were spent on this stat. Used in abstract classes only.
 	var/freebie_cost_spent = 0
 
+	// CRIMSONGRID EDIT START
+	/// If set, this stat is only shown for characters with this trait
+	var/required_trait
+	// CRIMSONGRID EDIT END
+
 // Score
 /datum/st_stat/proc/get_pure_score()
 	return score

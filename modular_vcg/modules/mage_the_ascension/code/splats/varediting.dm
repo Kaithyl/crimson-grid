@@ -1,0 +1,11 @@
+/datum/splat/mage/vv_edit_var(var_name, var_value)
+	. = ..()
+	if(!.)
+		return
+	switch(var_name)
+		if(NAMEOF(src, quintessence))
+			owner.update_mage_hud()
+		if(NAMEOF(src, paradox))
+			owner.update_mage_hud()
+		if(NAMEOF(src, permanent_paradox))
+			owner.update_mage_hud()

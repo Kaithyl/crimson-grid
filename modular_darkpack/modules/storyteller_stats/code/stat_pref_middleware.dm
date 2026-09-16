@@ -12,6 +12,10 @@
 	data["stats"] = list()
 	for(var/typepath in preferences.preference_storyteller_stats)
 		var/datum/st_stat/stat = preferences.preference_storyteller_stats[typepath]
+		// CRIMSONGRID EDIT START - Skip stats that require a specific trait
+		if(stat.required_trait)
+			continue
+		// CRIMSONGRID EDIT END
 		var/list/stat_data = list()
 		stat_data["name"] = stat.name
 		stat_data["desc"] = stat.description
@@ -48,6 +52,7 @@
 		else
 			if(freebie_point_stat.can_decrease_freebie_points(stat_path.freebie_point_cost)) // Can we spend freebie points instead?
 				freebie_point_stat.decrease_freebie_points(stat_path.freebie_point_cost) // If we can spend freebie points, decrease them.
+				abstract_stat.freebie_cost_spent += stat_path.freebie_point_cost  // CRIMSONGRID EDIT ADD
 			else
 				return FALSE // If we can't spend freebie points, then return early.
 
@@ -78,8 +83,10 @@
 		return FALSE
 
 	if((stat_path.get_pure_score() - 1) >= stat_path.starting_score)
-		if(freebie_point_stat.can_increase_freebie_points(stat_path.freebie_point_cost)) // Can we regain freebie points?
+		//if(freebie_point_stat.can_increase_freebie_points(stat_path.freebie_point_cost)) // Can we regain freebie points?
+		if(abstract_stat.freebie_cost_spent >= stat_path.freebie_point_cost) // CRIMSONGRID EDIT ADD
 			freebie_point_stat.increase_freebie_points(stat_path.freebie_point_cost) // Regain freebie points.
+			abstract_stat.freebie_cost_spent -= stat_path.freebie_point_cost // CRIMSONGRID EDIT ADD
 		else
 			abstract_stat.increase_points(1) // Regain a score point.
 
