@@ -1,31 +1,42 @@
-// Not a power but an innate menu
-/datum/action/innate/mental/rote_builder
+/datum/action/innate/rote_builder
 	name = "Open Rote Builder"
 
 	desc = ""
 
-	//click_action = TRUE
+	button_icon = 'modular_vcg/modules/mage_the_ascension/icons/actions.dmi'
+	button_icon_state = "mage"
 
 	// You should be able to modify premade effects while you are unconscious
 	// since this is a compromise between rotes and dynamic casting
 	//check_flags = NONE
 
-/datum/action/innate/mental/rote_builder/Trigger(mob/user, trigger_flags)
+/datum/action/innate/rote_builder/Trigger(mob/user, trigger_flags)
 	if(!..())
 		return FALSE
 
+	SEND_SOUND(owner, sound('sound/misc/menu/ui_select1.ogg', volume = 50))
+
 	ui_interact(user)
 
-/datum/action/innate/mental/rote_builder/ui_interact(mob/user, datum/tgui/ui)
+/datum/action/innate/rote_builder/ui_host(mob/user)
+    return owner
+
+/datum/action/innate/rote_builder/ui_state(mob/user)
+    return GLOB.always_state
+
+/datum/action/innate/rote_builder/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
 
 	if(!ui)
 		ui = new(user, src, "RoteBuilder", name)
 		ui.open()
 
-/datum/action/innate/mental/rote_builder/ui_data(mob/user)
+/datum/action/innate/rote_builder/ui_data(mob/user)
+
+	// TODO: Let ghosts see others builds but not edit
+
 	var/list/data = list()
-	data["user_name"] = user.name
+	//data["user_name"] = user.name
 	// Send arete, paradigm and sphere info
 	if(!isliving(user))
 		return data
@@ -37,13 +48,16 @@
 		//"paradigm" = ""
 	)
 
-	for(var/sphere in GLOB.all_spheres)
-		user_stats[sphere] = st_user.st_get_stat(GLOB.all_spheres[sphere])
+	for(var/sphere as anything in ALL_SPHERES)
+		user_stats[sphere] = st_user.st_get_stat(ALL_SPHERES[sphere])
 
 	data["user_stats"] = user_stats
 	return data
 
-/datum/action/innate/mental/rote_builder/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+/datum/action/innate/rote_builder/ui_static_data(mob/user)
+	return GLOB.magick_effect_static_data
+
+/datum/action/innate/rote_builder/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
 		return TRUE
 

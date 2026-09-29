@@ -41,7 +41,7 @@
 			return ..()
 
 		to_chat(mob, span_bolddanger("You have [our_splat.quintessence] Quintessence, [our_splat.paradox] Paradox, and [our_splat.permanent_paradox] Permanent Paradox."))
-		//to_chat(mob, span_bolddanger("[our_splat.owner?.st_get_stat(STAT_AVATAR)]"))
+		to_chat(mob, span_bolddanger("Your Avatar rating is [our_splat.owner?.st_get_stat(STAT_AVATAR)]."))
 
 	return ..()
 
@@ -60,7 +60,7 @@
 	if(!istype(our_splat))
 		return
 
-	icon_state = "quint[our_splat.quintessence]"
+	icon_state = "oldquint[our_splat.quintessence]"
 
 	var/total_dox = min(our_splat.permanent_paradox + our_splat.paradox, 20)
 
@@ -68,6 +68,8 @@
 	cut_overlays()
 	add_overlay("dox[min(total_dox, 20)]")
 	add_overlay("permadox[min(our_splat.permanent_paradox, 20)]")
+
+	add_overlay("avatar[our_splat.owner?.st_get_stat(STAT_AVATAR)]")
 
 	// TODO: Add a state for paradox 20+ overflow
 

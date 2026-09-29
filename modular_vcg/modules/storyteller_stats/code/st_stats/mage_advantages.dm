@@ -1,7 +1,7 @@
 /datum/st_stat/arete
 	category = "Advantage"
 	name = "Arete"
-	description = "Determines the dice pool for your effects and the point ceiling for your spheres. At higher Arete you may begin discarding instruments."
+	description = "Determines the dice pool for your effects and the point ceiling for your Spheres. At higher Arete some Paradigms may begin discarding instruments."
 	starting_score = 1
 	min_score = 1
 	max_score = MAX_ARETE

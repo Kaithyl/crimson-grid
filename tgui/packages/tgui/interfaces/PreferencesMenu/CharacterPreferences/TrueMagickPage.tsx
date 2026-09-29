@@ -1,4 +1,4 @@
-// CRIMSONGRID - INTENDED FOR DARKPACK UI
+// THIS IS A DARKPACK UI FILE - CRIMSONGRID
 import { useBackend } from 'tgui/backend';
 import { AnimatedNumber, Button, Section, Stack, Tooltip, } from 'tgui-core/components';
 
@@ -7,11 +7,26 @@ import type { PreferencesMenuData } from '../types';
 const KEY_SPHERE_POINTS = '/datum/st_stat/sphere';
 const KEY_FREEBIE_POINTS = '/datum/st_stat/freebie'
 
+type MageStat = {
+  name: string;
+  desc: string;
+  score: number;
+  bonus_score: number;
+  max_score: number;
+  editable: number;
+  category: string;
+  subcategory: string;
+  points: number;
+  abstract_type: string;
+};
+
 export function TrueMagickPage() {
   const { act, data } = useBackend<PreferencesMenuData>();
   if (!data) return;
 
-  const stats = data.mage_stats ?? {};
+  const stats: Record<string, MageStat> = (
+    data as PreferencesMenuData & { mage_stats: Record<string, MageStat> }
+  ).mage_stats ?? {};
 
   if (!stats || Object.keys(stats).length === 0) return null;
 
