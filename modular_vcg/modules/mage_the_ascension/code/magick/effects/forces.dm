@@ -14,8 +14,14 @@
 		),
 	)
 	looks_like = MAGICK_VULGAR_FIRE | MAGICK_VULGAR_EXPLOSION
-	inputs = alist("Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE)
-	outputs = alist("Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE)
+	inputs = alist(
+		"Activate" = MAGICK_DATA_ACTIVATE,
+		"Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE,
+		"Max Success" = MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE
+	)
+	outputs = alist(
+		"Activate" = MAGICK_DATA_ACTIVATE
+	)
 
 /datum/magick_effect/fireball/_cast(datum/magick_context/context)
 	var/alist/input_values = context.blackboard[src]

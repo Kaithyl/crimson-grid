@@ -10,6 +10,8 @@
 	// since this is a compromise between rotes and dynamic casting
 	//check_flags = NONE
 
+	allow_observer_click = TRUE
+
 /datum/action/innate/rote_builder/Trigger(mob/user, trigger_flags)
 	if(!..())
 		return FALSE
@@ -24,6 +26,9 @@
 /datum/action/innate/rote_builder/ui_state(mob/user)
     return GLOB.always_state
 
+/datum/action/innate/rote_builder/ui_assets(mob/user)
+	return list(get_asset_datum(/datum/asset/simple/plane_background))
+
 /datum/action/innate/rote_builder/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
 
@@ -33,10 +38,8 @@
 
 /datum/action/innate/rote_builder/ui_data(mob/user)
 
-	// TODO: Let ghosts see others builds but not edit
-
 	var/list/data = list()
-	//data["user_name"] = user.name
+	data["view_only"] = (owner != user)
 	// Send arete, paradigm and sphere info
 	if(!isliving(user))
 		return data
@@ -60,6 +63,10 @@
 /datum/action/innate/rote_builder/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
 		return TRUE
+
+	// Don't let spectating ghosts modify rotes
+	if(usr != owner)
+		return FALSE
 
 	switch (action)
 		if("button_clicked")

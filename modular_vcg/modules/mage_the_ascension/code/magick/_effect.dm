@@ -33,12 +33,19 @@
 	var/list/spheres
 
 	// Blackboard access is alist<Node, alist<string, var>>
-	var/alist/inputs = alist("Max Success" = MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE)
+	var/alist/inputs
 	var/alist/outputs
 
 /datum/magick_effect/proc/is_ready(blackboard)
 	var/alist/input = blackboard[src]
-	return (length(input) == length(inputs))
+	if (length(input) != length(inputs))
+		return FALSE
+	// Don't need to check because it will be null otherwise
+	// Only uncomment this if you want to add a feature where activation
+	// can explicitly be canceled by other nodes
+	/*if (input["Activate"] != TRUE)
+		return FALSE*/
+	return TRUE
 
 // For handling pre and post cast
 // Try to override _cast instead of this
@@ -72,6 +79,10 @@
 			child_inputs = blackboard[child] = alist()
 
 		if (output[output_name])
-			child_inputs[input_name] = output[output_name]
+			// IMPORTANT!!!! Activate connections
+			if (input_name == "Activate")
+				child_inputs[input_name] = TRUE
+			else
+				child_inputs[input_name] = output[output_name]
 			if (child.is_ready(blackboard))
 				child.cast(context)

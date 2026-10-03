@@ -6,8 +6,14 @@
 			SPHERE_CORRESPONDENCE = 2,
 		),
 	)
-	outputs = alist("Target" = MAGICK_DATA_MOB | MAGICK_DATA_COUNT_ANY)
-	inputs = alist("Radii" = MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE)
+	inputs = alist(
+		"Activate" = MAGICK_DATA_ACTIVATE,
+		"Radii" = MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE
+	)
+	outputs = alist(
+		"Activate" = MAGICK_DATA_ACTIVATE,
+		"Targets" = MAGICK_DATA_MOB | MAGICK_DATA_COUNT_ANY
+	)
 
 /datum/magick_effect/target_mobs/_cast(datum/magick_context/context)
 	var/alist/input_values = context.blackboard[src]
@@ -27,7 +33,13 @@
 			SPHERE_CORRESPONDENCE = 3,
 		),
 	)
-	inputs = alist("Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE)
+	inputs = alist(
+		"Activate" = MAGICK_DATA_ACTIVATE,
+		"Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE
+	)
+	outputs = alist(
+		"Activate" = MAGICK_DATA_ACTIVATE
+	)
 
 /datum/magick_effect/teleport_self/_cast(datum/magick_context/context)
 	var/alist/input_values = context.blackboard[src]

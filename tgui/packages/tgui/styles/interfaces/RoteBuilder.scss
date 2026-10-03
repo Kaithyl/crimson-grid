@@ -1,0 +1,341 @@
+.rote-builder__content {
+  background-image: none;
+  padding: 0;
+}
+
+.rote-builder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rote-builder__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.rote-builder__palette {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+
+  width: 220px;
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+
+  background-color: rgba(0, 0, 0, 0.85);
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.rote-builder__palette-header {
+  padding: 6px;
+
+  font-weight: bold;
+  text-align: center;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.rote-builder__effect {
+  padding: 4px 8px;
+
+  cursor: grab;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.rote-drawflow-host {
+  width: 100%;
+  height: 100%;
+}
+
+/* Nodes */
+$node-pad-y: 10px;
+$node-pad-x: 14px;
+$node-border: 2px;
+
+$title-h: 20px;
+$title-gap: 10px;
+$ports-divider: 1px;
+$ports-pad-top: 6px;
+
+$socket: 16px;
+$port-gap: 5px;
+
+$tooltip-gap: 6px;
+
+$ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
+
+.rote-builder__content {
+  background-image: none;
+  padding: 0;
+}
+
+.rote-builder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rote-builder__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.rote-builder__palette {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+
+  width: 220px;
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+
+  background-color: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.rote-builder__palette-header {
+  padding: 6px;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.rote-builder__effect {
+  padding: 4px 8px;
+  cursor: grab;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.rote-drawflow-host {
+  width: 100%;
+  height: 100%;
+}
+
+.rote-node__body {
+  width: 100%;
+  min-width: 0;
+}
+
+.rote-node__title {
+  height: $title-h;
+  line-height: $title-h;
+  margin: 0 0 $title-gap;
+
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rote-node__tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + #{$node-border + $tooltip-gap});
+  transform: translateX(-50%);
+
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 10px;
+
+  background: rgba(15, 10, 20, 0.97);
+  color: #eee;
+  border: 1px solid #6a3d8f;
+  border-radius: 5px;
+
+  font-size: 11px;
+  line-height: 1.35;
+
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 120ms ease,
+    visibility 120ms ease;
+  z-index: 100;
+}
+
+.drawflow .drawflow-node:hover .rote-node__tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.rote-node__ports {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: $ports-pad-top;
+  border-top: $ports-divider solid rgba(255, 255, 255, 0.1);
+}
+
+.rote-node__port-col {
+  display: flex;
+  flex-direction: column;
+  gap: $port-gap;
+  min-width: 0;
+}
+
+.rote-node__port-col--in {
+  text-align: left;
+}
+
+.rote-node__port-col--out {
+  text-align: right;
+}
+
+.rote-node__port-label {
+  height: $socket;
+  line-height: $socket;
+
+  font-size: 11px;
+  color: #bbb;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* drawflow */
+.drawflow .drawflow-node {
+  position: absolute;
+  box-sizing: border-box;
+  align-items: flex-start;
+  min-width: 220px;
+  max-width: 320px;
+  padding: $node-pad-y $node-pad-x;
+
+  background: rgba(20, 10, 30, 0.92);
+  color: #ddd;
+  border: $node-border solid #6a3d8f;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.drawflow .drawflow-node:hover {
+  cursor: move;
+  z-index: 10;
+}
+
+.drawflow .drawflow-node.selected {
+  background: rgba(45, 28, 60, 0.96);
+  border-color: #b06de8;
+  box-shadow: 0 0 0 2px rgba(176, 109, 232, 0.18);
+}
+
+.drawflow .drawflow-node .drawflow_content_node {
+  width: 100%;
+  min-width: 0;
+  display: block;
+}
+
+.drawflow .drawflow-node .inputs,
+.drawflow .drawflow-node .outputs {
+  width: 0;
+  flex-shrink: 0;
+  padding-top: $ports-offset;
+}
+
+/* Normal ports */
+.drawflow .drawflow-node .input,
+.drawflow .drawflow-node .output {
+  position: relative;
+  top: 0;
+  box-sizing: border-box;
+
+  width: $socket;
+  height: $socket;
+  margin: 0 0 $port-gap;
+
+  border: 2px solid #111;
+  border-radius: 50%;
+
+  cursor: crosshair;
+  z-index: 5;
+  transition:
+    opacity 100ms ease,
+    background-color 100ms ease;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:hover {
+    background: #fff;
+  }
+}
+
+.drawflow .drawflow-node .input {
+  left: -($node-pad-x + $socket * 0.5 + $node-border * 0.5);
+  background: #e0c050;
+}
+
+.drawflow .drawflow-node .output {
+  right: -($node-pad-x * 0.5);
+  background: #70c0ff;
+}
+
+/* Activation ports */
+.drawflow .drawflow-node .input.rote-port--activate,
+.drawflow .drawflow-node .output.rote-port--activate {
+  position: absolute;
+  top: $node-pad-y + ($title-h - $socket) * 0.5;
+
+  width: $socket;
+  height: $socket;
+  margin: 0;
+
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+
+  z-index: 5;
+}
+
+.drawflow .drawflow-node .input.rote-port--activate {
+  left: -($socket * 0.5 + $node-border * 0.5);
+  right: auto;
+  background: #e0c050;
+}
+
+.drawflow .drawflow-node .output.rote-port--activate {
+  right: -($socket * 0.5 + $node-border * 0.5);
+  left: auto;
+  background: #70c0ff;
+}
+
+/* Connection hints */
+.rote-node__port-label {
+  transition: opacity 100ms ease;
+}
+
+.drawflow .drawflow-node .input.rote-port--invalid {
+  &, &:hover {
+    background: #555;
+  }
+
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.rote-node__port-label.rote-port--invalid {
+  opacity: 0.35;
+}
