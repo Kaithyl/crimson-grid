@@ -14,19 +14,25 @@
 		),
 	)
 	looks_like = MAGICK_VULGAR_FIRE | MAGICK_VULGAR_EXPLOSION
-	inputs = alist("Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE)
-	outputs = alist("Target" = MAGICK_DATA_ANY | MAGICK_DATA_COUNT_ONE)
+	inputs = list(
+		MAGICK_PORT_ACTIVATE,
+		MAGICK_PORT_TARGET,
+		MAGICK_PORT_NUMBER_("Max Successes"),
+	)
+	outputs = list(
+		MAGICK_PORT_ACTIVATE,
+	)
 
 /datum/magick_effect/fireball/_cast(datum/magick_context/context)
 	var/alist/input_values = context.blackboard[src]
 	var/caster = context.caster
 	var/successes = context.successes
-	var/target = input_values["Target"]
+	var/target = input_values[2]
 
 	if (!target || successes < min_successes)
 		return null
 
-	var/max_successes = input_values["Max Success"]
+	var/max_successes = input_values[3]
 	if (max_successes)
 		successes = min(successes, max_successes)
 
@@ -44,4 +50,4 @@
 
 	context.successes -= successes
 
-	return alist("Target" = target)
+	return alist(1 = target)

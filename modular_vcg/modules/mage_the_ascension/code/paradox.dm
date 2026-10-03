@@ -3,7 +3,7 @@
 		paradox += amount
 		var/total_dox = permanent_paradox + paradox
 
-		//___callbackvarsetif (MAX_QUINTESSENCE_AND_PARADOX - total_dox < quintessence)
+		//if (MAX_QUINTESSENCE_AND_PARADOX - total_dox < quintessence)
 			// TODO: handle paradox canceling out quint
 
 		// Use temp willpower to push backlash back by 1 SCENE
