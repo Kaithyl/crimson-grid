@@ -87,7 +87,7 @@
 
 	// roll arete with required_success
 
-	var/successes
+	/*var/successes
 
 	var/alist/context = alist(
 		"caster" = clicker,
@@ -95,6 +95,6 @@
 		"successes" = successes,
 		"explanations" = 0,
 		"paradox" = FALSE,
-	)
+	)*/
 
 	//get effect then cast

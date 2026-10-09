@@ -1,4 +1,4 @@
-import { FLAG_TRIGGER } from '../constants';
+import { FLAG_TRIGGER, FLAG_NUMBER, FLAG_STRING } from '../constants';
 import type { EffectData, PortData } from '../types';
 
 export const validConnection = (output: PortData, input: PortData): boolean => {
@@ -12,6 +12,15 @@ export const validConnection = (output: PortData, input: PortData): boolean => {
 
 export const isTriggerPort = (port: PortData): boolean =>
   (port.type & FLAG_TRIGGER) !== 0;
+
+export const isNumberPort = (port: PortData): boolean =>
+  (port.type & FLAG_NUMBER) !== 0;
+
+export const isStringPort = (port: PortData): boolean =>
+  (port.type & FLAG_STRING) !== 0;
+
+export const hasWhitelist = (port: PortData): boolean =>
+  port.whitelist !== undefined && port.whitelist.length > 0;
 
 export const getPorts = (
   data: EffectData | undefined,

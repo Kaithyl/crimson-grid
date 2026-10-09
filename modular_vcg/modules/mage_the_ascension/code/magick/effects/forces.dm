@@ -13,41 +13,37 @@
 			SPHERE_PRIME = 2,
 		),
 	)
+	min_successes = 1
 	looks_like = MAGICK_VULGAR_FIRE | MAGICK_VULGAR_EXPLOSION
-	inputs = list(
-		MAGICK_PORT_ACTIVATE,
-		MAGICK_PORT_TARGET,
-		MAGICK_PORT_NUMBER_("Max Successes"),
-	)
-	outputs = list(
-		MAGICK_PORT_ACTIVATE,
-	)
+	ports_typepath = /datum/magick_ports/activatable/fireball
 
-/datum/magick_effect/fireball/_cast(datum/magick_context/context)
-	var/alist/input_values = context.blackboard[src]
-	var/caster = context.caster
-	var/successes = context.successes
-	var/target = input_values[2]
+/datum/magick_ports/activatable/fireball
+	var/datum/magick_port/any/in_origin = MAGICK_PORT_ORIGIN
+	var/datum/magick_port/any/in_target = MAGICK_PORT_TARGET
+	var/datum/magick_port/number/in_maxsucc = MAGICK_PORT_NUMBER_("Max Successes", 0, null)
 
-	if (!target || successes < min_successes)
-		return null
+/datum/magick_effect/fireball/pre_cast(datum/magick_context/context)
+	..(context)
+	var/datum/magick_ports/activatable/fireball/ports = context.blackboard[src]
+	var/max_successes = ports.in_maxsucc.get()
+	min_successes = max_successes ? min(context.successes, max_successes) : context.successes
 
-	var/max_successes = input_values[3]
-	if (max_successes)
-		successes = min(successes, max_successes)
+/datum/magick_effect/fireball/cast(datum/magick_context/context)
+	var/datum/magick_ports/activatable/fireball/ports = context.blackboard[src]
+	var/origin = ports.in_origin.get()
+	var/target = ports.in_target.get()
+
+	if (!target)
+		return
 
 	var/obj/projectile/magic/fireball/projectile = new(get_turf(target))
-	var/origin = context.subtle ? target : caster
-	//if not subtle set fired_from depending on foci
-	//projectile.fired_from
+	projectile.fired_from = origin
 	projectile.aim_projectile(target, origin)
 
-	projectile.damage = 2 * (successes + 1) TTRPG_DAMAGE
-	projectile.exp_heavy = max(0, successes - 4)
-	projectile.exp_light = clamp(successes - 1, 0, 4)
-	projectile.exp_fire = clamp(successes - 1, 0, 3)
-	projectile.exp_flash = clamp(successes, 1, 5)
+	projectile.damage = 2 * (min_successes + 1) TTRPG_DAMAGE
+	projectile.exp_heavy = max(0, min_successes - 4)
+	projectile.exp_light = clamp(min_successes - 1, 0, 4)
+	projectile.exp_fire = clamp(min_successes - 1, 0, 3)
+	projectile.exp_flash = clamp(min_successes, 1, 5)
 
-	context.successes -= successes
-
-	return alist(1 = target)
+	ports.out_activate.assign(target)

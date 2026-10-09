@@ -19,6 +19,10 @@ export type UserStats = {
 export type PortData = {
   name: string;
   type: number;
+  desc?: string;
+  clamp_min?: number;
+  clamp_max?: number;
+  whitelist?: string[];
   [key: string]: unknown;
 };
 
