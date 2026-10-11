@@ -31,10 +31,7 @@ export type EffectData = {
   desc: string;
   type: string;
   tags: number;
-  looks_like: number;
-  explains: number;
   quintessence: number;
-  min_successes: number;
   complexity: number;
   spheres: Record<string, number>[];
   inputs: PortData[];

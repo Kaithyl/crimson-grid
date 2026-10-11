@@ -1,0 +1,1 @@
+#define MAGICK_BASE_DIFFICULTY 6

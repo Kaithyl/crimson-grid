@@ -4,25 +4,13 @@
 	// alist<number, list<number, Node>>
 	var/alist/edges
 
-	// Minimum successes required for this effect
-	var/min_successes = 0
-
 	/*
 	 * Treat all the vars below as if they are abstract static, since BYOND doesn't support it.
 	 */
 
 	var/name
 	var/desc
-
-	// For easy searching in UI
 	var/tags
-
-	// Requirements to disguise this effect as coincidental
-	var/looks_like
-
-	// If this effect may contribute coincidental requirements for future effects
-	//TODO: Turn this into a component system that checks for/adds effect origin
-	var/explains
 
 	// Cost to cast effect
 	var/quintessence = 0
@@ -37,16 +25,28 @@
 	// Available sphere combinations for this effect
 	var/list/spheres
 
-	// Blackboard access is alist<Node, datum/magick_ports>
-	// Only stores the typepath. Retrieve the actual value from the blackboard
-	var/ports_typepath
+	var/list/inputs
+	var/list/outputs
 
-/datum/magick_effect/proc/is_ready(blackboard)
-	var/datum/magick_ports/ports = blackboard[src]
-	if (!ports)
-		return FALSE
-	for (var/datum/magick_port/in_port as anything in ports.inputs)
-		if (in_port.get() == null)
+/datum/magick_effect/New()
+	inputs = list()
+	outputs = list()
+
+	// If this is too suboptimal, switch to manually filling
+	// inputs/outputs with created vars in subclass
+	for(var/v_name in src.vars)
+		var/v_value = src.vars[v_name]
+
+		if(v_value && istype(v_value, /datum/magick_port/))
+			var/datum/magick_port/port = v_value
+			if (port.input)
+				inputs += v_value
+			else
+				outputs += v_value
+
+/datum/magick_effect/proc/is_ready(datum/magick_context/context)
+	for (var/datum/magick_port/in_port as anything in inputs)
+		if (context.get(in_port) == null)
 			return FALSE
 	return TRUE
 
@@ -62,10 +62,10 @@
 		sleep(0)
 
 	pre_cast(context)
-	if (context.successes < min_successes)
+	/*if (context.successes < min_successes)
 		return
-	context.successes -= min_successes
-	context.explains |= explains
+	context.successes -= min_successes*/
+	//context.explains |= explains
 	cast(context)
 	post_cast(context)
 
@@ -75,35 +75,26 @@
 
 // Only override for custom handling of checking coincidental casting
 /datum/magick_effect/proc/pre_cast(datum/magick_context/context)
-	if (!context.paradox && looks_like)
+	/*if (!context.paradox && looks_like)
 		if ((context.explains & looks_like) != looks_like)
-			context.paradox = TRUE
+			context.paradox = TRUE*/
 
 // Only override for custom handling of child nodes
 /datum/magick_effect/proc/post_cast(datum/magick_context/context)
-	var/datum/magick_ports/ports = context.blackboard[src]
-	if (!ports)
-		return
+	for (var/datum/magick_port/output/out_port as anything in edges)
+		if (context.get(out_port) == null)
+			continue
 
-	for (var/output_id as anything in edges)
-		var/list/tuple = edges[output_id]
-		var/input_id = tuple[1]
-		var/datum/magick_effect/child = tuple[2]
+		var/list/connections = edges[out_port]
+		for (var/list/tuple as anything in connections)
+			var/datum/magick_port/in_port = tuple[1]
+			var/datum/magick_effect/child = tuple[2]
 
-		var/datum/magick_port/output/out_port = ports.outputs[output_id]
-		if (out_port && out_port.get() != null)
-			var/datum/magick_ports/child_ports = context.blackboard[child]
-			if (!child_ports)
-				child_ports = new child.ports_typepath()
-				context.blackboard[child] = child_ports
-
-			// IMPORTANT!!!! Activate connections
-			var/datum/magick_port/in_port = child_ports.inputs[input_id]
-			if (in_port.type_flags & MAGICK_DATA_TRIGGER)
-				in_port.assign(TRUE)
+			if (in_port.type_flags & MAGICK_DATATYPE_TRIGGER)
+				context.assign(in_port, /datum/magick_value/trigger::get_singleton())
 			else
-				in_port.assign(out_port.get())
-			if (child.is_ready(context.blackboard))
+				context.assign(in_port, context.get(out_port))
+			if (child.is_ready(context))
 				child.__cast(context)
 
 /proc/init_magick_effect_static_data()
@@ -123,10 +114,7 @@
 			"desc" = effect.desc,
 			"type" = "[effect_type]",
 			"tags" = effect.tags,
-			"looks_like" = effect.looks_like,
-			"explains" = effect.explains,
 			"quintessence" = effect.quintessence,
-			"min_successes" = effect.min_successes,
 			"complexity" = effect.complexity,
 			"spheres" = effect.spheres,
 		)
@@ -134,35 +122,28 @@
 		var/list/inputs_list = list()
 		var/list/outputs_list = list()
 
-		if (effect.ports_typepath)
-			var/datum/magick_ports/ports = new effect.ports_typepath()
+		for(var/datum/magick_port/port as anything in effect.inputs)
+			var/list/port_data = list(
+				"name" = port.name,
+				"type" = port.type_flags,
+				"desc" = port.desc,
+			)
+			if (port.type_flags & MAGICK_DATATYPE_NUMBER)
+				if (port.min_clamp != null)
+					port_data["min_clamp"] = port.min_clamp
+				if (port.max_clamp != null)
+					port_data["max_clamp"] = port.max_clamp
+			else if (port.type_flags & MAGICK_DATATYPE_STRING)
+				if (port.whitelist != null)
+					port_data["whitelist"] = port.whitelist
+			UNTYPED_LIST_ADD(inputs_list, port_data)
 
-			for(var/datum/magick_port/port as anything in ports.inputs)
-				var/list/port_data = list(
-					"name" = port.name,
-					"type" = port.type_flags,
-					"desc" = port.desc,
-				)
-				if (istype(port, /datum/magick_port/number))
-					var/datum/magick_port/number/num_port = port
-					if (num_port.clamp_min != null)
-						port_data["clamp_min"] = num_port.clamp_min
-					if (num_port.clamp_max != null)
-						port_data["clamp_max"] = num_port.clamp_max
-				else if (istype(port, /datum/magick_port/string))
-					var/datum/magick_port/string/str_port = port
-					if (str_port.whitelist != null)
-						port_data["whitelist"] = str_port.whitelist
-				UNTYPED_LIST_ADD(inputs_list, port_data)
-
-			for(var/datum/magick_port/port as anything in ports.outputs)
-				UNTYPED_LIST_ADD(outputs_list, list(
-					"name" = port.name,
-					"type" = port.type_flags,
-					"desc" = port.desc,
-				))
-
-			qdel(ports)
+		for(var/datum/magick_port/port as anything in effect.outputs)
+			UNTYPED_LIST_ADD(outputs_list, list(
+				"name" = port.name,
+				"type" = port.type_flags,
+				"desc" = port.desc,
+			))
 
 		effect_data["inputs"] = inputs_list
 		effect_data["outputs"] = outputs_list

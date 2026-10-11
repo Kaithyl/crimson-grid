@@ -20,7 +20,6 @@
 	SPHERE_TIME = STAT_SPHERE_TIME, \
 )
 
-// Should be 10 IF archspheres are ever implemented
 #define MAX_SPHERE 5
 
 #define MAX_ARETE 10

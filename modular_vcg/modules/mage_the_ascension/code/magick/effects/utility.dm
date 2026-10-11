@@ -1,93 +1,66 @@
-/datum/magick_effect/count
+/datum/magick_effect/activatable
+	var/datum/magick_port/input/in_act = MAGICK_PORT_ACTIVATE
+	var/datum/magick_port/output/out_act = MAGICK_PORT_ACTIVATE
+
+// Count
+/*/datum/magick_effect/count
 	name = "Count"
 	tags = MAGICK_TAG_DATA
 	complexity = 0
-	ports_typepath = /datum/magick_ports/count
 
-/datum/magick_ports/count
-	var/datum/magick_port/any/in_targets = MAGICK_PORT_TARGET_S
-
-	var/datum/magick_port/output/out_number = new("Number", MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE)
+	var/datum/magick_port/input/in_list = MAGICK_PORT_TARGETS
+	var/datum/magick_port/output/out_num = MAGICK_PORT_NUMBER
 
 /datum/magick_effect/count/cast(datum/magick_context/context)
-	var/datum/magick_ports/count/ports = context.blackboard[src]
-	ports.out_number.assign(length(ports.in_targets.get()))
+	var/list/targets = in_list.get_value(context)
+	out_num.assign(context, length(targets))*/
+
+// Add
 
 /datum/magick_effect/add
 	name = "Add"
 	tags = MAGICK_TAG_DATA
 	complexity = 0
-	ports_typepath = /datum/magick_ports/add
 
-/datum/magick_ports/add
-	var/datum/magick_port/number/in_a = new("Number", MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE)
-	var/datum/magick_port/number/in_b = new("Number", MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE)
-
-	var/datum/magick_port/output/out_sum = new("Number", MAGICK_DATA_NUMBER | MAGICK_DATA_COUNT_ONE)
+	var/datum/magick_port/input/in_a = MAGICK_PORT_NUMBER
+	var/datum/magick_port/input/in_b = MAGICK_PORT_NUMBER
+	var/datum/magick_port/output/out_sum = MAGICK_PORT_NUMBER
 
 /datum/magick_effect/add/cast(datum/magick_context/context)
-	var/datum/magick_ports/add/ports = context.blackboard[src]
-	ports.out_sum.assign(ports.in_a.get() + ports.in_b.get())
+	var/a = context.get(in_a)
+	var/b = context.get(in_b)
+	context.assign(out_sum, a + b, MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE)
 
-/datum/magick_effect/for_each
+// For each
+
+/datum/magick_effect/activatable/for_each
 	name = "For Each"
 	tags = MAGICK_TAG_DATA
 	complexity = 0
 	max_nodes = 1
-	ports_typepath = /datum/magick_ports/activatable/for_each
 
-/datum/magick_ports/activatable/for_each
-	var/datum/magick_port/any/in_targets = MAGICK_PORT_TARGET_S
-
+	var/datum/magick_port/input/in_targets = MAGICK_PORT_TARGETS
 	var/datum/magick_port/output/out_target = MAGICK_PORT_TARGET
-	var/datum/magick_port/output/out_succ = MAGICK_PORT_NUMBER_("Successes", null, null)
 
-/datum/magick_effect/for_each/cast(datum/magick_context/context)
-	var/datum/magick_ports/activatable/for_each/ports = context.blackboard[src]
-	ports.out_succ.assign(context.successes)
-
-/datum/magick_effect/for_each/post_cast(datum/magick_context/context)
-	var/datum/magick_ports/activatable/for_each/ports = context.blackboard[src]
-	if (!ports)
-		return
-
-	var/list/targets = ports.in_targets.get()
+/datum/magick_effect/activatable/for_each/post_cast(datum/magick_context/context)
+	var/list/datum/magick_value/targets = context.get(in_targets)
 	if (!length(targets))
 		return
 
-	for (var/output_id as anything in edges)
-		var/list/tuple = edges[output_id]
-		var/input_id = tuple[1]
-		var/datum/magick_effect/child = tuple[2]
-
-		// Check if output to input is out_succ
-		var/datum/magick_port/output/out_port = ports.outputs[output_id]
-		if (out_port == ports.out_succ)
-			var/datum/magick_ports/child_ports = context.blackboard[child]
-			if (!child_ports)
-				child_ports = new child.ports_typepath()
-				context.blackboard[child] = child_ports
-
-			var/datum/magick_port/in_port = child_ports.inputs[input_id]
-			if (in_port.type_flags & MAGICK_DATA_TRIGGER)
-				in_port.assign(TRUE)
-			else
-				in_port.assign(out_port.get())
-			if (child.is_ready(context.blackboard))
-				child.__cast(context)
+	for (var/datum/magick_port/output/out_port as anything in edges)
+		if (context.get(out_port) == null)
 			continue
 
-		// Handle recursive casting for activate connections
-		for (var/target in targets)
-			var/datum/magick_ports/child_ports = context.blackboard[child]
-			if (!child_ports)
-				child_ports = new child.ports_typepath()
-				context.blackboard[child] = child_ports
+		var/list/connections = edges[out_port]
+		for (var/list/tuple in connections)
+			var/datum/magick_port/in_port = tuple[1]
+			var/datum/magick_effect/child = tuple[2]
 
-			var/datum/magick_port/in_port = child_ports.inputs[input_id]
-			if (in_port.type_flags & MAGICK_DATA_TRIGGER)
-				in_port.assign(TRUE)
-			else
-				in_port.assign(target)
-			if (child.is_ready(context.blackboard))
-				child.__cast(context)
+			// Handle recursive casting for activate connections
+			for (var/datum/magick_value/target in targets)
+				if (in_port.type_flags & MAGICK_DATATYPE_TRIGGER)
+					context.assign(in_port, /datum/magick_value/trigger::get_singleton())
+				else
+					context.assign(in_port, target)
+				if (child.is_ready(context))
+					child.__cast(context)
