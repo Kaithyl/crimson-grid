@@ -7,7 +7,10 @@ import { Window } from '../../layouts';
 import type { RoteBuilderData } from './types'
 import { useCanvas } from './useCanvas';
 import { createEffectNode } from './nodes/node'
+import { getUserData } from './nodes/nodes'
+import { useNodeSettings } from './useNodeSettings';
 import { EffectsMenu } from './EffectsMenu'
+import { NodeSettingsPopup } from './NodeSettingsPopup'
 
 // @ts-ignore
 import 'drawflow/dist/drawflow.min.css';
@@ -17,6 +20,8 @@ import '../../styles/interfaces/RoteBuilder.scss'; // Load this last to override
 export const RoteBuilder = () => {
   const { data } = useBackend<RoteBuilderData>();
   const { canvasRef, drawflowRef } = useCanvas();
+
+  const { nodeData: nodesettings, save: handlePopupSave, close: handlePopupClose } = useNodeSettings(canvasRef);
 
   const draggedItemRef = useRef<string | null>(null);
 
@@ -70,6 +75,15 @@ export const RoteBuilder = () => {
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
             />
+
+            {nodesettings && (
+              <NodeSettingsPopup
+                effect={nodesettings.effect}
+                data={getUserData(nodesettings.nodeId) ?? { label: '', success_percentage: 0, min_success: 0, max_success: 0 }}
+                onSave={handlePopupSave}
+                onClose={handlePopupClose}
+              />
+            )}
         </div>
       </Window.Content>
     </Window>

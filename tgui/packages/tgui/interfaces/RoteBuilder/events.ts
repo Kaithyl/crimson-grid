@@ -1,5 +1,7 @@
 import type Drawflow from 'drawflow';
 
+import { unregisterNode } from './nodes/nodes';
+
 import { BG_SCALE, GRID_SIZE } from './constants';
 import { getPorts, isTriggerPort, validConnection, portIndex } from './nodes/port'
 import type { EffectData } from './types';
@@ -33,6 +35,8 @@ export const createCanvasEventHandler = (df: Drawflow, el: HTMLElement): Cleanup
 	return () => window.removeEventListener('resize', onResize);
 }
 
+export const NODE_SETTINGS_EVENT = 'rote-node-settings-click';
+
 export const createNodeEventHandler = (df: Drawflow, el: HTMLElement): CleanupHandler => {
 	df.on('nodeCreated', (id) => {
 		const node = df.getNodeFromId(id);
@@ -52,9 +56,26 @@ export const createNodeEventHandler = (df: Drawflow, el: HTMLElement): CleanupHa
 				nodeEl.querySelector(`.outputs .output_${i + 1}`)?.classList.add(PORT_TRIGGER);
 			}
 		});
+
+		// Prevent drawflow from intercepting clicks on the settings icon
+		const settingsIcon = nodeEl.querySelector('.rote-node__settings-icon');
+		if (settingsIcon) {
+			settingsIcon.addEventListener('click', (e) => {
+				e.stopPropagation();
+
+				el.dispatchEvent(
+					new CustomEvent(NODE_SETTINGS_EVENT, {
+						bubbles: true,
+						detail: `node-${id}`,
+					}),
+				);
+			});
+		}
 	});
 
-	df.on('nodeRemoved', (id) => console.log('Node removed:', id));
+	df.on('nodeRemoved', (id) => {
+		unregisterNode(`node-${id}`);
+	});
 	return () => {};
 };
 

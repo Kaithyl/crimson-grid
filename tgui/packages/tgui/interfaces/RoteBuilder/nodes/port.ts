@@ -1,13 +1,21 @@
-import { FLAG_TRIGGER, FLAG_NUMBER, FLAG_STRING } from '../constants';
+import { FLAG_TRIGGER, FLAG_NUMBER, FLAG_STRING, FLAG_ATOM } from '../constants';
 import type { EffectData, PortData } from '../types';
 
 export const validConnection = (output: PortData, input: PortData): boolean => {
+  // Make sure trigger ports can only connect to each other
   const outAct = output.type & FLAG_TRIGGER;
   const inAct = input.type & FLAG_TRIGGER;
   if (outAct || inAct) {
     return outAct === inAct;
   }
-  return (input.type & ~output.type) === 0;
+
+  // Atom subtypes can connect to general ATOM flag but not each other
+  const atom_check = (output.type & ~input.type & FLAG_ATOM) === 0;
+
+  // Input flag must be a subset of the output flag
+  const is_subset = (input.type & ~output.type & ~FLAG_ATOM) === 0;
+
+  return atom_check && is_subset;
 };
 
 export const isTriggerPort = (port: PortData): boolean =>

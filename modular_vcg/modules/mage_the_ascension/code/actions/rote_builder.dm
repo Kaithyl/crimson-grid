@@ -10,7 +10,14 @@
 	// since this is a compromise between rotes and dynamic casting
 	//check_flags = NONE
 
+	var/list/datum/action/innate/rote/rotes
+
 	allow_observer_click = TRUE
+
+/datum/action/innate/rote_builder/New()
+	..()
+	rotes = list()
+	rotes.len = MAGICK_MAX_ROTES
 
 /datum/action/innate/rote_builder/Trigger(mob/user, trigger_flags)
 	if(!..())

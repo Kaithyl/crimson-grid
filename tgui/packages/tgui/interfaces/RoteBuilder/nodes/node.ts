@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify';
 import type Drawflow from 'drawflow';
 
 import { isTriggerPort, isNumberPort, isStringPort, hasWhitelist } from './port';
+import { registerNode } from './nodes';
 import type { EffectData, PortData } from '../types';
 
 const makePortControls = (port: PortData): string => {
@@ -16,6 +17,11 @@ const makePortControls = (port: PortData): string => {
         ? `max="${DOMPurify.sanitize(String(port.clamp_max))}"`
         : '';
 
+    const value =
+      port.default_value !== null && port.default_value !== undefined
+        ? `value="${DOMPurify.sanitize(String(port.default_value))}"`
+        : '';
+
     return `
       <input
         type="number"
@@ -23,6 +29,7 @@ const makePortControls = (port: PortData): string => {
         class="rote-port__value"
         ${min}
         ${max}
+        ${value}
       />
     `;
   }
@@ -41,10 +48,16 @@ const makePortControls = (port: PortData): string => {
       `;
     }
 
+    const value =
+      port.default_value !== null && port.default_value !== undefined
+        ? `value="${DOMPurify.sanitize(String(port.default_value))}"`
+        : '';
+
     return `
       <input
         type="text"
         class="rote-port__value"
+        ${value}
       />
     `;
   }
@@ -71,12 +84,23 @@ const makePortLabels = (ports: PortData[], dir: 'input' | 'output'): string =>
     )
     .join('');
 
-export const makeNodeHtml = (effect: EffectData): string => {
+export const makeNodeHtml = (effect: EffectData, label?: string): string => {
   const desc = String(effect.desc ?? '').trim();
+  const sanitizedName = DOMPurify.sanitize(effect.name);
+  const sanitizedLabel = label ? DOMPurify.sanitize(label) : '';
+  const labelHidden = sanitizedLabel ? '' : ' rote-node__label--hidden';
+
+  const labelHtml = `<div class="rote-node__label${labelHidden}">${sanitizedLabel}</div>`;
 
   return `
     <div class="rote-node__body">
-      <div class="rote-node__title">${DOMPurify.sanitize(effect.name)}</div>
+      <div class="rote-node__header">
+        <div class="rote-node__title-row">
+          <span class="rote-node__title-text">${sanitizedName}</span>
+          <span class="rote-node__settings-icon" title="Edit node settings">⚙</span>
+        </div>
+        ${labelHtml}
+      </div>
 
       <div class="rote-node__ports">
         <div class="rote-node__port-col rote-node__port-col--in">
@@ -97,7 +121,7 @@ export const createEffectNode = (editor: Drawflow, effect: EffectData, clientX: 
   const x = (clientX - rect.left) / editor.zoom;
   const y = (clientY - rect.top) / editor.zoom;
 
-  editor.addNode(
+  const nodeId = editor.addNode(
     effect.name,
     effect.inputs.length,
     effect.outputs.length,
@@ -108,4 +132,9 @@ export const createEffectNode = (editor: Drawflow, effect: EffectData, clientX: 
     makeNodeHtml(effect),
     false,
   );
+
+  registerNode(`node-${nodeId}`, effect);
+
+  return nodeId;
 };
+

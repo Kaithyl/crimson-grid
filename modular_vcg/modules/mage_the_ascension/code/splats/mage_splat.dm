@@ -20,7 +20,7 @@
 
 	splat_priority = SPLAT_PRIO_MAGE
 
-	splat_traits = list(TRAIT_AWAKENED)
+	//splat_traits = list(TRAIT_AWAKENED)
 
 	// TODO: Allow embrace but lose mage splat. Add willpower option to die instead of getting embraced.
 	incompatible_splats = list(/datum/splat/werewolf/shifter, /datum/splat/vampire/kindred)
@@ -28,23 +28,33 @@
 
 /datum/splat/mage/on_gain()
 	. = ..()
+	if (owner.client)
+		bind_splat_to_mind(owner)
+	else
+		RegisterSignal(owner, COMSIG_MOB_LOGIN, PROC_REF(bind_splat_to_mind))
+		RegisterSignal(owner, COMSIG_HUMAN_CHARACTER_SETUP_FINISHED, PROC_REF(bind_splat_to_mind))
+
+	adjust_quintessence(owner.st_get_stat(STAT_AVATAR))
+
+/datum/splat/mage/on_lose_or_destroy()
+	UnregisterSignal(owner, list(COMSIG_MOB_LOGIN, COMSIG_HUMAN_CHARACTER_SETUP_FINISHED))
+	. = ..()
+	QDEL_NULL(rote_builder_action)
+	QDEL_NULL(delay_backlash_action)
+
+/datum/splat/mage/proc/bind_splat_to_mind(datum/source)
+	SIGNAL_HANDLER
+	UnregisterSignal(owner, list(COMSIG_MOB_LOGIN, COMSIG_HUMAN_CHARACTER_SETUP_FINISHED))
 
 	true_owner = owner.mind
 
 	if (!rote_builder_action)
-		rote_builder_action = new(true_owner || owner)
+		rote_builder_action = new(true_owner)
 	rote_builder_action.Grant(owner)
 
 	if (!delay_backlash_action)
-		delay_backlash_action = new(true_owner || owner)
+		delay_backlash_action = new(true_owner)
 	delay_backlash_action.Grant(owner)
-
-	adjust_quintessence(owner.st_get_stat(STAT_AVATAR))
-
-/datum/splat/mage/on_lose()
-	. = ..()
-	qdel(rote_builder_action)
-	qdel(delay_backlash_action)
 
 /datum/splat/mage/willworker
 	name = "Mage"

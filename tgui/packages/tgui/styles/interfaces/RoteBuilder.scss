@@ -75,10 +75,20 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   min-width: 0;
 }
 
-.rote-node__title {
+.rote-node__header {
+  margin-bottom: $title-gap;
+}
+
+.rote-node__title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rote-node__title-text {
+  flex: 1;
   height: $title-h;
   line-height: $title-h;
-  margin: 0 0 $title-gap;
 
   font-size: 14px;
   font-weight: bold;
@@ -87,6 +97,43 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.rote-node__settings-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: $title-h;
+  height: $title-h;
+
+  font-size: 12px;
+  line-height: $title-h;
+  cursor: pointer;
+  opacity: 0.5;
+  border-radius: 3px;
+  transition: opacity 100ms ease, background-color 100ms ease;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.rote-node__label {
+  font-size: 11px;
+  font-style: italic;
+  color: #a8d8ea;
+  line-height: 1.3;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rote-node__label--hidden {
+  display: none;
 }
 
 .rote-node__tooltip {

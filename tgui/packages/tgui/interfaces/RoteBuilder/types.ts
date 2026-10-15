@@ -14,12 +14,14 @@ export type UserStats = {
   prime?: number;
   spirit?: number;
   time?: number;
+  [key: string]: unknown;
 };
 
 export type PortData = {
   name: string;
   type: number;
   desc?: string;
+  default_value?: number | string;
   clamp_min?: number;
   clamp_max?: number;
   whitelist?: string[];
@@ -34,7 +36,16 @@ export type EffectData = {
   quintessence: number;
   complexity: number;
   spheres: Record<string, number>[];
+  can_add_success: boolean;
   inputs: PortData[];
   outputs: PortData[];
+  [key: string]: unknown;
+};
+
+export type NodeUserData = {
+  label: string;
+  success_percentage: number;
+  min_success: number;
+  max_success: number;
   [key: string]: unknown;
 };

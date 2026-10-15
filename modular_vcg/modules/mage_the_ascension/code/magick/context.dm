@@ -1,6 +1,6 @@
 /datum/magick_context
 	var/mob/caster
-	var/subtle
+	// Avoid manually adjusting successes
 	var/successes
 	var/explains = 0
 	var/paradox = FALSE
@@ -10,16 +10,15 @@
 	// and alist<magick_effect, magick_node_context>
 	VAR_PRIVATE/alist/blackboard = new()
 
-/datum/magick_context/proc/get(/datum/magick_port/port)
+/datum/magick_context/proc/get(datum/magick_port/port)
 	var/datum/magick_value/payload = blackboard[port]
 	return payload == null ? null : port.validate(payload)
 
-/datum/magick_context/proc/get_value(/datum/magick_port/port)
+/datum/magick_context/proc/get_value(datum/magick_port/port)
 	var/datum/magick_value/v = get(port)
 	return v.value
 
-// Since output -> input type checking is done at graph creation, you don't have to check inputs again
-/datum/magick_context/proc/assign(/datum/magick_port/port, value, type_flags=null)
+/datum/magick_context/proc/assign(datum/magick_port/port, value, type_flags=null)
 	if (istype(value, /datum/magick_value/))
 		var/datum/magick_value/v = value
 		if (MAGICK_DATATYPES_VALID(v.type_flags, port.type_flags))

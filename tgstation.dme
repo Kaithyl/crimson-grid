@@ -8436,6 +8436,7 @@
 #include "modular_vcg\modules\mage_the_ascension\code\magick\node.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\effects\correspondence.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\effects\forces.dm"
+#include "modular_vcg\modules\mage_the_ascension\code\magick\effects\root.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\effects\utility.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\preferences\mage_pref_middleware.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\splats\is_mage_helpers.dm"

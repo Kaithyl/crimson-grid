@@ -2,7 +2,20 @@
 	abstract_type = /datum/magick_effect/
 
 	// alist<number, list<number, Node>>
-	var/alist/edges
+	VAR_PROTECTED/alist/edges
+
+	/*
+	 * These are userdata that are manually set by the player
+	 */
+
+	// Name given to effect node
+	var/label
+	// Success settings are only visible if can_add_success is true
+	// What percentage of global success to allocate
+	var/success_percentage
+	// Success die clamps
+	var/min_success
+	var/max_success
 
 	/*
 	 * Treat all the vars below as if they are abstract static, since BYOND doesn't support it.
@@ -15,20 +28,31 @@
 	// Cost to cast effect
 	var/quintessence = 0
 
+	// Minimum successes required for this spell to have an effect
+	var/min_success_cost = 0
+
+	// If the spell's effect can be enhanced by adding multiple successes
+	var/can_add_success = FALSE
+
 	// How much complexity this focus takes up
 	var/complexity = 1
 
-	// Maximum number of this node allowed in a spell
+	// Maximum number of this subtype of node allowed in a spell
 	// Mostly to prevent lag for costly effects
 	var/max_nodes
 
 	// Available sphere combinations for this effect
 	var/list/spheres
 
+	// Define these if you want in and out activation ports
+	var/datum/magick_port/input/in_act
+	var/datum/magick_port/output/out_act
+
 	var/list/inputs
 	var/list/outputs
 
-/datum/magick_effect/New()
+/datum/magick_effect/New(edges)
+	src.edges = edges
 	inputs = list()
 	outputs = list()
 
@@ -62,11 +86,12 @@
 		sleep(0)
 
 	pre_cast(context)
-	/*if (context.successes < min_successes)
-		return
-	context.successes -= min_successes*/
-	//context.explains |= explains
 	cast(context)
+	/*if (context.successes < success_cost)
+		return
+	context.successes -= success_cost
+	if (in_act && out_act)
+		context.assign(out_act, context.get_value(in_act) - success_cost, MAGICK_DATATYPE_TRIGGER)*/
 	post_cast(context)
 
 // Must override this for actually doing the effect
@@ -86,12 +111,17 @@
 			continue
 
 		var/list/connections = edges[out_port]
+		var/branch_count = length(connections)
+		var/successes_per_branch = 0
+		if (out_port.type_flags & MAGICK_DATATYPE_TRIGGER && branch_count > 0)
+			successes_per_branch = max(1, round(context.get_value(out_port) / branch_count))
+
 		for (var/list/tuple as anything in connections)
 			var/datum/magick_port/in_port = tuple[1]
 			var/datum/magick_effect/child = tuple[2]
 
 			if (in_port.type_flags & MAGICK_DATATYPE_TRIGGER)
-				context.assign(in_port, /datum/magick_value/trigger::get_singleton())
+				context.assign(in_port, successes_per_branch, MAGICK_DATATYPE_TRIGGER)
 			else
 				context.assign(in_port, context.get(out_port))
 			if (child.is_ready(context))
@@ -103,7 +133,7 @@
 
 	for(var/effect_type as anything in subtypesof(/datum/magick_effect/))
 
-		var/datum/magick_effect/effect = new effect_type()
+		var/datum/magick_effect/effect = new effect_type(null)
 
 		if (effect_type == effect.abstract_type)
 			qdel(effect)
@@ -117,6 +147,7 @@
 			"quintessence" = effect.quintessence,
 			"complexity" = effect.complexity,
 			"spheres" = effect.spheres,
+			"can_add_success" = effect.can_add_success,
 		)
 
 		var/list/inputs_list = list()
@@ -127,6 +158,7 @@
 				"name" = port.name,
 				"type" = port.type_flags,
 				"desc" = port.desc,
+				"default_value" = port.default_value,
 			)
 			if (port.type_flags & MAGICK_DATATYPE_NUMBER)
 				if (port.min_clamp != null)
@@ -143,6 +175,7 @@
 				"name" = port.name,
 				"type" = port.type_flags,
 				"desc" = port.desc,
+				"default_value" = port.default_value,
 			))
 
 		effect_data["inputs"] = inputs_list

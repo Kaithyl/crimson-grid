@@ -4,8 +4,9 @@
  *	Damaging forces spells add 1 success die to final damage total
  */
 /datum/magick_effect/forces/
-	var/datum/magick_port/input/in_act = MAGICK_PORT_ACTIVATE
-	var/datum/magick_port/output/out_act = MAGICK_PORT_ACTIVATE
+	abstract_type = /datum/magick_effect/forces/
+	in_act = MAGICK_PORT_ACTIVATE
+	out_act = MAGICK_PORT_ACTIVATE
 
 /datum/magick_effect/forces/fireball
 	name = "Fireball"
@@ -16,7 +17,8 @@
 			SPHERE_PRIME = 2,
 		),
 	)
-	//min_successes = 2
+	min_success_cost = 2
+	can_add_success = TRUE
 
 	var/datum/magick_port/input/in_origin = MAGICK_PORT_ORIGIN
 	var/datum/magick_port/input/in_target = MAGICK_PORT_TARGET
@@ -27,12 +29,12 @@
 
 	var/successes = 0
 
-	if (!target)
+	if (!origin || !target)
 		return
 
-	var/obj/projectile/magic/fireball/projectile = new(get_turf(origin))
-	//projectile.firer = origin //cast to mob?
-	//projectile.fired_from = origin //get mob's hands?
+	var/obj/projectile/magic/fireball/projectile = new(origin)
+	//projectile.firer = origin //cast to mob
+	//projectile.fired_from = origin //get mob's hands
 	projectile.aim_projectile(target, origin)
 
 	projectile.damage = 2 * (successes + 1) LETHAL_TTRPG_DAMAGE
