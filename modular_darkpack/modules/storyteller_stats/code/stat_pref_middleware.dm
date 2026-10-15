@@ -92,6 +92,11 @@
 
 	stat_path.decrease_score(1) // By this point we know we have regained either a point, or the appropriate freebie cost for this stat, and it is not min_score. So decrease it by one.
 
+	// CRIMSONGRID EDIT ADD START - MAGES: Permanent WP caps Arete
+	if(istype(stat_path, /datum/st_stat/pooled/permanent_willpower))
+		handle_mage_willpower_decrease()
+	// CRIMSONGRID EDIT ADD END
+
 	if(stat_path.stat_flags & AFFECTS_STATS)
 		update_middleware_stats(preferences.preference_storyteller_stats)
 
@@ -112,4 +117,7 @@
 
 	preferences.preference_storyteller_stats = list()
 	preferences.preference_storyteller_stats = create_new_stat_prefs(preferences.preference_storyteller_stats)
+	// CRIMSONGRID EDIT ADD START - Reapply mage WP floor
+	handle_mage_willpower_setup(user)
+	// CRIMSONGRID EDIT ADD END
 	return TRUE

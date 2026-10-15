@@ -32,7 +32,7 @@ GLOBAL_LIST_INIT(source_book_priority, list(
 /datum/source_book/wta20
 	name = "Werewolf The Apocalypse 20th Anniversary Edition"
 	offical_status = SOURCE_OFFICAL
-	
+
 /datum/source_book/gt_tmr
 	name = "The Black Hand Guide to The Tal'Mahe'Ra"
 	offical_status = SOURCE_OFFICAL
@@ -58,6 +58,15 @@ GLOBAL_LIST_INIT(source_book_priority, list(
 /datum/source_book/vtm20/vampire_wild_west
 	name = "Vampire The Wild West"
 	offical_status = SOURCE_STORYTELLER_VAULT
+
+// CRIMSONGRID EDIT START
+/datum/source_book/mta3
+	name = "Mage the Ascension Revised Edition"
+	offical_status = SOURCE_OFFICAL
+
+/datum/source_book/mta3/initiates_of_the_art
+	name = "Mage the Ascension Initiates of the Art"
+// CRIMSONGRID EDIT END
 
 /datum/source_book/homebrew
 	name = "Homebrew"
