@@ -5,7 +5,7 @@
 #define MAGICK_SLEEP_INTERVAL 8
 
 #define MAGICK_FOR_LOOP_MAX_LIST 20
-#define MAGICK_FOR_LOOP_MAX_BRANCHES 3
+#define MAGICK_FOR_LOOP_MAX_BRANCHES 10
 
 #define MAGICK_TARGET_ENABLE_TEXT(label, count) "Select the [label ? label : "next target"] for your spell. ([count] manual target selections remaining)."
 
@@ -21,7 +21,14 @@
 #define MAGICK_DATATYPE_FLAG_SINGLE				(1<<22)
 #define MAGICK_DATATYPE_FLAG_LIST				(1<<23)
 
-#define MAGICK_DATATYPES_VALID(out_flags, in_flags) (!((out_flags) & ~(in_flags)))
+#define MAGICK_DATATYPES_VALID(out_flags, in_flags) ( \
+	(((out_flags) & MAGICK_DATATYPE_TRIGGER) || ((in_flags) & MAGICK_DATATYPE_TRIGGER)) \
+		? ((((out_flags) & MAGICK_DATATYPE_TRIGGER) == ((in_flags) & MAGICK_DATATYPE_TRIGGER))) \
+		: ( \
+			((((out_flags) & ~(in_flags) & MAGICK_DATATYPE_ATOM) == 0)) \
+			&& ((((in_flags) & ~(out_flags) & ~MAGICK_DATATYPE_ATOM) == 0)) \
+		) \
+)
 
 #define MAGICK_TAG_ROOT						(1<<0)	// For root nodes in the execution tree
 #define MAGICK_TAG_DATA						(1<<1) 	// For effects that do nothing besides data processing

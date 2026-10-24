@@ -1,6 +1,9 @@
 export type RoteBuilderData = {
   user_stats: UserStats;
   effects: EffectData[];
+  view_only?: boolean;
+  rote_data?: string;
+  rote_name?: string;
 };
 
 export type UserStats = {
@@ -18,12 +21,13 @@ export type UserStats = {
 };
 
 export type PortData = {
+  key: string;
   name: string;
   type: number;
   desc?: string;
   default_value?: number | string;
-  clamp_min?: number;
-  clamp_max?: number;
+  min_clamp?: number;
+  max_clamp?: number;
   whitelist?: string[];
   [key: string]: unknown;
 };
@@ -35,6 +39,8 @@ export type EffectData = {
   tags: number;
   quintessence: number;
   complexity: number;
+  max_nodes?: number;
+  min_success_cost?: number;
   spheres: Record<string, number>[];
   can_add_success: boolean;
   inputs: PortData[];
@@ -47,5 +53,6 @@ export type NodeUserData = {
   success_percentage: number;
   min_success: number;
   max_success: number;
+  sphere_index: number;
   [key: string]: unknown;
 };

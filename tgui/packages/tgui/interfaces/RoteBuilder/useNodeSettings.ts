@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EffectData, NodeUserData } from './types';
-import { getNodeEntry, updateUserData } from './nodes/nodes';
+import { getNodeEntry, updateUserData } from './rote/rote';
 import { NODE_SETTINGS_EVENT } from './events';
 
 type NodeData = {

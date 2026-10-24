@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Box, Button, Input, Modal, NumberInput, Section, Stack } from 'tgui-core/components';
+import { Box, Button, Dropdown, Input, Modal, NumberInput, Section, Stack } from 'tgui-core/components';
 
 import type { EffectData, NodeUserData } from './types';
 
@@ -11,13 +11,22 @@ type Props = {
   onClose: () => void;
 };
 
-export const NodeSettingsPopup = (props: Props) => {
+const sphereOptionText = (option: Record<string, number>): string =>
+  Object.entries(option)
+    .map(([sphere, level]) => `${sphere} ${level}`)
+    .join(', ');
+
+export const NodeSettingsMenu = (props: Props) => {
   const { effect, data, onSave, onClose } = props;
 
   const [label, setLabel] = useState(data.label ?? '');
   const [successPercentage, setSuccessPercentage] = useState(data.success_percentage ?? 0);
   const [minSuccess, setMinSuccess] = useState(data.min_success ?? 0);
   const [maxSuccess, setMaxSuccess] = useState(data.max_success ?? 0);
+  const [sphereIndex, setSphereIndex] = useState(data.sphere_index ?? 0);
+
+  const sphereOptions = (effect.spheres ?? []).map(sphereOptionText);
+  const canChooseSphere = sphereOptions.length > 1;
 
   const handleSave = () => {
     onSave({
@@ -25,6 +34,7 @@ export const NodeSettingsPopup = (props: Props) => {
       success_percentage: successPercentage,
       min_success: minSuccess,
       max_success: maxSuccess,
+      sphere_index: sphereIndex,
     });
   };
 
@@ -50,6 +60,27 @@ export const NodeSettingsPopup = (props: Props) => {
               onChange={setLabel}
             />
           </Stack.Item>
+
+          {sphereOptions.length > 0 && (
+            <Stack.Item>
+              <Box color="label" mb={1}>
+                Sphere Configuration
+              </Box>
+              {canChooseSphere ? (
+                <Dropdown
+                  fluid
+                  options={sphereOptions}
+                  selected={sphereOptions[sphereIndex] ?? sphereOptions[0]}
+                  onSelected={(value) => {
+                    const index = sphereOptions.indexOf(String(value));
+                    setSphereIndex(index >= 0 ? index : 0);
+                  }}
+                />
+              ) : (
+                <Box color="label">{sphereOptions[0]}</Box>
+              )}
+            </Stack.Item>
+          )}
 
           {!!effect.can_add_success && (
             <>

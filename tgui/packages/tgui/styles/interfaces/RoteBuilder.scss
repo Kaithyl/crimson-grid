@@ -422,3 +422,116 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
 .rote-node__port-label.rote-port--invalid {
   opacity: 0.35;
 }
+
+/* Save panel */
+.rote-builder__save-panel {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 8px 10px;
+
+  background-color: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.rote-builder__save-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rote-builder__save-name {
+  width: 180px;
+}
+
+.rote-builder__save-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.rote-builder__complexity {
+  color: #a8d8ea;
+}
+
+.rote-builder__node-count {
+  color: #bbb;
+}
+
+/* Inline feedback messages */
+.rote-builder__message {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+
+  padding: 6px 14px;
+
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.rote-builder__message--error {
+  background: rgba(120, 20, 20, 0.92);
+  border: 1px solid #f66;
+  color: #fff;
+}
+
+.rote-builder__message--ok {
+  background: rgba(20, 90, 20, 0.92);
+  border: 1px solid #6f6;
+  color: #fff;
+}
+
+/* Rote code */
+.rote-builder__rote-code {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.rote-builder__rote-code-label {
+  font-size: 11px;
+  color: #888;
+  flex: 0 0 auto;
+}
+
+.rote-builder__rote-code-value {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 300px;
+  padding: 4px 6px;
+
+  background: #0a0a12;
+  color: #8af;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  user-select: all;
+  -webkit-user-select: all;
+  cursor: text;
+}

@@ -1,38 +1,54 @@
 // For each
 
-/datum/magick_effect/iterate_list
+/datum/magick_effect_data/iterate_list
 	name = "Iterate (List)"
+	desc = "Iterate over a list of targets, casting child nodes for each one."
 	tags = MAGICK_TAG_DATA
 	max_nodes = 1
+/datum/magick_effect/iterate_list
+	data = /datum/magick_effect_data/iterate_list
 
-	in_act = MAGICK_PORT_ACTIVATE
-	out_act = MAGICK_PORT_ACTIVATE
+	var/in_targets = "in_targets"
+	var/out_target = "out_target"
 
-	var/datum/magick_port/input/in_targets = MAGICK_PORT_TARGETS
-	var/datum/magick_port/output/out_target = MAGICK_PORT_TARGET
+	inputs = alist(
+		in_act = MAGICK_PORT_ACTIVATE,
+		in_targets = MAGICK_PORT_TARGETS,
+	)
+	outputs = alist(
+		out_act = MAGICK_PORT_ACTIVATE,
+		out_target = MAGICK_PORT_TARGET,
+	)
 
 /datum/magick_effect/iterate_list/post_cast(datum/magick_context/context)
-	var/list/datum/magick_value/targets = context.get(in_targets)
+	var/list/datum/magick_value/targets = context.get(src, in_targets)
 	if (!length(targets))
 		return
 
+	var/alist/effect_edges = context.effect_graph[src]
+	if (effect_edges == null)
+		return
+
 	var/children_processed = 0
-	for (var/datum/magick_port/output/out_port as anything in edges)
+	for (var/out_port_key as anything in effect_edges)
 		if (children_processed >= MAGICK_FOR_LOOP_MAX_BRANCHES)
 			break
 
-		if (context.get(out_port) == null)
+		if (context.get(src, out_port_key) == null)
 			continue
 
-		var/list/connections = edges[out_port]
-		var/child_count = length(connections)
-		var/successes_per_child = 0
-		if (out_port.type_flags & MAGICK_DATATYPE_TRIGGER && child_count > 0)
-			successes_per_child = max(1, round(context.get_value(out_port) / child_count))
+		var/list/connections = effect_edges[out_port_key]
+		var/remaining_successes = context.get_value(src, out_port_key)
+		var/remaining_targets = length(targets)
 
-		for (var/list/tuple in connections)
-			var/datum/magick_port/in_port = tuple[1]
-			var/datum/magick_effect/child = tuple[2]
+		for (var/list/tuple as anything in connections)
+			var/in_port_key = tuple[2]
+			var/datum/magick_effect/child = tuple[3]
+
+			var/alist/child_inputs = child.inputs
+			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
+			if (in_port_def == null)
+				continue
 
 			// Handle recursive casting for activate connections
 			var/targets_processed = 0
@@ -40,49 +56,70 @@
 				if (targets_processed >= MAGICK_FOR_LOOP_MAX_LIST)
 					break
 
-				if (in_port.type_flags & MAGICK_DATATYPE_TRIGGER)
-					context.assign(in_port, successes_per_child, MAGICK_DATATYPE_TRIGGER)
+				var/successes_for_target = 0
+				if (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER && remaining_targets > 0)
+					successes_for_target = max(1, round(remaining_successes / remaining_targets))
+					context.assign(child, in_port_key, successes_for_target, MAGICK_DATATYPE_TRIGGER)
 				else
-					context.assign(in_port, target)
+					context.assign(child, in_port_key, target)
+
 				if (child.is_ready(context))
+					// Track how many successes the branch consumed so leftovers
+					// can be redistributed to remaining targets
+					var/before = context.successes
 					child.__cast(context)
+					var/after = context.successes
+					var/consumed = before - after
+					remaining_successes = max(0, remaining_successes - consumed)
+				else
+					remaining_successes = max(0, remaining_successes - successes_for_target)
+
 				targets_processed++
+				remaining_targets--
 		children_processed++
 
 // Target mobs
 
-/datum/magick_effect/target_mobs
+/datum/magick_effect_data/target_mobs
 	name = "AOE Target (Mobs)"
-	desc = "Get all mobs within a maximum radius of X tiles from the target."
+	desc = "Get all mobs within a maximum radius of 7 tiles from the target."
 	tags = MAGICK_TAG_DATA
+	max_nodes = 1
+/datum/magick_effect/target_mobs
+	data = /datum/magick_effect_data/target_mobs
 	spheres = list(
 		alist(
 			SPHERE_CORRESPONDENCE = 2,
 		),
 	)
-	max_nodes = 1
 
-	var/datum/magick_port/input/in_target = MAGICK_PORT_TARGET
-	var/datum/magick_port/input/in_radius = MAGICK_PORT_NUMBER_clamp_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5)
-	var/datum/magick_port/output/out_targets = new("Targets (Mob)", MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+	var/in_radius = "in_radius"
+	var/in_target = "in_target"
+	var/out_targets = "out_targets"
 
-/datum/magick_effect/target_mobs/New()
-	..()
-	desc = "Get all mobs within a maximum radius of [MAGICK_LINE_OF_SIGHT_DISTANCE] tiles from the target."
+	inputs = alist(
+		in_act = MAGICK_PORT_ACTIVATE,
+		in_radius = MAGICK_PORT_NUMBER_clamp_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5),
+		in_target = MAGICK_PORT_TARGET,
+	)
+	outputs = alist(
+		out_act = MAGICK_PORT_ACTIVATE,
+		out_targets = alist("name" = "Targets (Mob)", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST),
+	)
 
 /datum/magick_effect/target_mobs/cast(datum/magick_context/context)
-	var/radius = context.get_value(in_radius)
-	var/target = context.get_value(in_target)
+	var/radius = context.get_value(src, in_radius)
+	var/target = context.get_value(src, in_target)
 
 	if (!target)
-		context.assign(out_targets, list(), MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+		context.assign(src, out_targets, list(), MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
 		return
 
 	var/list/targets = list()
 	for (var/mob/living/living_mob in range(radius, target))
 		targets += new /datum/magick_value(living_mob)
 
-	context.assign(out_targets, targets, MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+	context.assign(src, out_targets, targets, MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
 
 // Count
 
@@ -111,4 +148,3 @@
 	var/a = context.get(in_a)
 	var/b = context.get(in_b)
 	context.assign(out_sum, a + b, MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE)*/
-

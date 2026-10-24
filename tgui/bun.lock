@@ -6,6 +6,7 @@
       "name": "tgui-workspace",
       "dependencies": {
         "drawflow": "^0.0.60",
+        "lz-string": "^1.5.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.0.11",

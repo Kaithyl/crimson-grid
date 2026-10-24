@@ -8433,7 +8433,6 @@
 #include "modular_vcg\modules\mage_the_ascension\code\magick\_effect.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\context.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\focus.dm"
-#include "modular_vcg\modules\mage_the_ascension\code\magick\node.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\effects\correspondence.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\effects\forces.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\effects\root.dm"

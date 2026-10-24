@@ -1,9 +1,9 @@
 import type Drawflow from 'drawflow';
 
-import { unregisterNode } from './nodes/nodes';
+import { unregisterNode, updateUserData } from './rote/rote';
 
 import { BG_SCALE, GRID_SIZE } from './constants';
-import { getPorts, isTriggerPort, validConnection, portIndex } from './nodes/port'
+import { getPorts, isTriggerPort, validConnection, portIndex } from './rote/port'
 import type { EffectData } from './types';
 
 // All event handlers created inside a useEffect should return this function for cleaning themselves
@@ -71,6 +71,20 @@ export const createNodeEventHandler = (df: Drawflow, el: HTMLElement): CleanupHa
 				);
 			});
 		}
+
+        // Port value event handler
+		const portInputs = nodeEl.querySelectorAll<HTMLInputElement>('.rote-port__value');
+		const effect = node.data as EffectData;
+		portInputs.forEach((input, i) => {
+			const savePortValue = () => {
+				const portKey = effect.inputs[i]?.key;
+				if (portKey && input.value !== '') {
+					updateUserData(`node-${id}`, { [`port_${portKey}`]: input.value });
+				}
+			};
+			input.addEventListener('change', savePortValue);
+			input.addEventListener('blur', savePortValue);
+		});
 	});
 
 	df.on('nodeRemoved', (id) => {

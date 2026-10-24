@@ -30,6 +30,7 @@
 		"packages/*"
 	],
 	"dependencies": {
-		"drawflow": "^0.0.60"
+		"drawflow": "^0.0.60",
+		"lz-string": "^1.5.0"
 	}
 }

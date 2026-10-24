@@ -2,19 +2,19 @@ import DOMPurify from 'dompurify';
 import type Drawflow from 'drawflow';
 
 import { isTriggerPort, isNumberPort, isStringPort, hasWhitelist } from './port';
-import { registerNode } from './nodes';
+import { registerNode } from './rote';
 import type { EffectData, PortData } from '../types';
 
 const makePortControls = (port: PortData): string => {
   if (isNumberPort(port)) {
     const min =
-      port.clamp_min !== null && port.clamp_min !== undefined
-        ? `min="${DOMPurify.sanitize(String(port.clamp_min))}"`
+      port.min_clamp !== null && port.min_clamp !== undefined
+        ? `min="${DOMPurify.sanitize(String(port.min_clamp))}"`
         : '';
 
     const max =
-      port.clamp_max !== null && port.clamp_max !== undefined
-        ? `max="${DOMPurify.sanitize(String(port.clamp_max))}"`
+      port.max_clamp !== null && port.max_clamp !== undefined
+        ? `max="${DOMPurify.sanitize(String(port.max_clamp))}"`
         : '';
 
     const value =
