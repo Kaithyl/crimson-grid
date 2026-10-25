@@ -27,8 +27,6 @@
 	if(preferences.current_window != PREFERENCE_TAB_CHARACTER_PREFERENCES)
 		return list()
 
-	handle_mage_willpower_setup(user)
-
 	var/list/data = list()
 	data["mage_stats"] = list()
 
@@ -179,11 +177,11 @@
 	var/real_name = user.client.prefs.read_preference(/datum/preference/name/real_name)
 	user.log_message("reset all true magick stats to default values on '[real_name]'", LOG_STATS)
 
-	refund_all_mage_points()
-	handle_mage_willpower_setup(user)
+	refund_all_mage_stats()
+	apply_mage_willpower(user)
 	return TRUE
 
-/datum/preference_middleware/mage_stats/proc/refund_all_mage_points()
+/datum/preference_middleware/mage_stats/proc/refund_all_mage_stats()
 	var/datum/st_stat/freebie/freebie_stat = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
 	if(!freebie_stat)
 		return
@@ -220,141 +218,81 @@
 		return
 
 	var/current_splat = preferences.read_preference(/datum/preference/choiced/splats)
-	if(!ispath(current_splat, /datum/splat/mage))
-		// No longer a mage, drop the mage Permanent Willpower floor
-		revert_mage_willpower_setup()
-		refund_all_mage_points()
-		preferences.save_character()
-		return
+	if(ispath(current_splat, /datum/splat/mage))
+		revert_mage_willpower(user) // refund any willpower bought as a non-mage
+		apply_mage_willpower(user)  // then grant the free mage willpower
+	else
+		refund_all_mage_stats()     // refund spheres/arete first so there are freebies to take the WP bonus back from
+		revert_mage_willpower(user)
+	preferences.save_character()
 
-	handle_mage_willpower_setup(user)
-
-/datum/preference_middleware/proc/user_has_initiate_of_the_art(mob/user)
-	/*if (user)
-		if (HAS_TRAIT(user, TRAIT_INITIATE_OF_THE_ART))
-			return TRUE
-		if (HAS_MIND_TRAIT(user, TRAIT_INITIATE_OF_THE_ART))
-			return TRUE*/
-	// Above doesn't work before spawning in, have to manually check in character creator
-	for(var/quirk_name in preferences.all_quirks)
-		var/datum/quirk/quirk_type = SSquirks.quirks[quirk_name]
-		if(!isnull(quirk_type) && initial(quirk_type.mob_trait) == TRAIT_INITIATE_OF_THE_ART)
-			return TRUE
-	return FALSE
-
-/datum/preference_middleware/proc/mage_willpower_minimum(mob/user)
+/datum/preference_middleware/proc/apply_mage_willpower(mob/user)
 	var/splat = preferences.read_preference(/datum/preference/choiced/splats)
 	if(!ispath(splat, /datum/splat/mage))
-		return null
-	if(user_has_initiate_of_the_art(user))
-		return MAGE_MIN_WILLPOWER_INITIATE
-	return MAGE_MIN_WILLPOWER
-
-/// Applies the free Permanent WP floor for mages
-/datum/preference_middleware/proc/handle_mage_willpower_setup(mob/user)
-	var/min_willpower = mage_willpower_minimum(user)
-	var/datum/st_stat/willpower_stat = preferences.preference_storyteller_stats[STAT_PERMANENT_WILLPOWER]
-	if(isnull(min_willpower) || !willpower_stat)
 		return
 
-	// Clear any leftover pool points so Permanent WP always costs freebie points
+	var/datum/st_stat/willpower_stat = preferences.preference_storyteller_stats[STAT_PERMANENT_WILLPOWER]
+	if(!willpower_stat)
+		return
+
 	var/datum/st_stat/pooled/willpower_category = preferences.preference_storyteller_stats[willpower_stat.abstract_type]
 	if(willpower_category)
 		willpower_category.set_points(0)
 
-	willpower_stat.min_score = min_willpower
-	willpower_stat.starting_score = min_willpower
-	if(willpower_stat.get_pure_score() < min_willpower)
-		willpower_stat.set_score(min_willpower)
+	willpower_stat.min_score = MAGE_MIN_WILLPOWER
+	willpower_stat.starting_score = MAGE_MIN_WILLPOWER
+
+	if(willpower_stat.get_pure_score() < MAGE_MIN_WILLPOWER)
+		willpower_stat.set_score(MAGE_STARTING_WILLPOWER)
+		if(willpower_category)
+			willpower_category.freebie_cost_spent = (MAGE_STARTING_WILLPOWER - MAGE_MIN_WILLPOWER) * willpower_stat.freebie_point_cost
 		update_middleware_stats(preferences.preference_storyteller_stats)
 
 	enforce_arete_willpower_cap()
 
-// Copy of same function from quirks.dm to handle mage-specific quirks
-/datum/preference_middleware/quirks/give_quirk(list/params, mob/user)
-	var/quirk_name = params["quirk"]
-	var/datum/st_stat/freebie/freebie_points = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
-	var/datum/quirk/quirk_type = SSquirks.quirks[quirk_name]
-	freebie_points.decrease_points(quirk_type.value)
-	preferences.validate_quirks()
-	var/list/new_quirks = preferences.all_quirks | quirk_name
-	if (SSquirks.filter_invalid_quirks(new_quirks) != new_quirks)
-		tainted = TRUE
-		preferences.update_static_data(user, always_instant = TRUE)
-		return TRUE
-
-	preferences.all_quirks = new_quirks
-	tainted = TRUE
-	preferences.character_preview_view?.update_body()
-	handle_initiate_of_the_art_toggle(user, quirk_name, TRUE)
-	return TRUE
-
-// Copy of same function from quirks.dm to handle mage-specific quirks
-/datum/preference_middleware/quirks/remove_quirk(list/params, mob/user)
-	var/quirk_name = params["quirk"]
-	var/datum/st_stat/freebie/freebie_points = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
-	var/datum/quirk/quirk_type = SSquirks.quirks[quirk_name]
-	freebie_points.increase_points(quirk_type.value)
-	var/list/new_quirks = preferences.all_quirks - quirk_name
-	if (!(quirk_name in preferences.all_quirks) || SSquirks.filter_invalid_quirks(new_quirks) != new_quirks)
-		tainted = TRUE
-		preferences.update_static_data(user, always_instant = TRUE)
-		return TRUE
-
-	preferences.all_quirks = new_quirks
-	tainted = TRUE
-	preferences.character_preview_view?.update_body()
-	handle_initiate_of_the_art_toggle(user, quirk_name, FALSE)
-	return TRUE
-
-// Resets Permanent WP to the floor the quirk now requires and refunds dots that vanish
-/datum/preference_middleware/proc/handle_initiate_of_the_art_toggle(mob/user, quirk_name, is_taking)
-	if(is_taking != (quirk_name in preferences.all_quirks))
-		return
-	var/datum/quirk/quirk_type = SSquirks.quirks[quirk_name]
-	if(isnull(quirk_type) || initial(quirk_type.mob_trait) != TRAIT_INITIATE_OF_THE_ART)
-		return
-	var/splat = preferences.read_preference(/datum/preference/choiced/splats)
-	if(!ispath(splat, /datum/splat/mage))
-		return
-
-	var/min_willpower = is_taking ? MAGE_MIN_WILLPOWER_INITIATE : MAGE_MIN_WILLPOWER
+/datum/preference_middleware/proc/revert_mage_willpower(mob/user)
 	var/datum/st_stat/willpower_stat = preferences.preference_storyteller_stats[STAT_PERMANENT_WILLPOWER]
 	if(!willpower_stat)
 		return
+
 	var/datum/st_stat/pooled/willpower_category = preferences.preference_storyteller_stats[willpower_stat.abstract_type]
 	var/datum/st_stat/freebie/freebie_stat = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
+
+	var/net_spent = 0
 	if(willpower_category)
-		if(freebie_stat && willpower_category.freebie_cost_spent > 0)
-			freebie_stat.increase_freebie_points(willpower_category.freebie_cost_spent)
-			willpower_category.freebie_cost_spent = 0
-		willpower_category.set_points(0)
-
-	willpower_stat.min_score = min_willpower
-	willpower_stat.starting_score = min_willpower
-	willpower_stat.set_score(min_willpower)
-	update_middleware_stats(preferences.preference_storyteller_stats)
-
-/datum/preference_middleware/proc/revert_mage_willpower_setup()
-	var/datum/st_stat/willpower_stat = preferences.preference_storyteller_stats[STAT_PERMANENT_WILLPOWER]
-	if(!willpower_stat)
-		return
-
-	// Drop the free Permanent WP dots mage granted, and refund anything the
-	// player actually paid to raise Willpower above that floor before they stop being a mage.
-	var/datum/st_stat/pooled/willpower_category = preferences.preference_storyteller_stats[willpower_stat.abstract_type]
-	var/datum/st_stat/freebie/freebie_stat = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
-	if(willpower_category && freebie_stat)
-		if(willpower_category.freebie_cost_spent > 0)
-			freebie_stat.increase_freebie_points(willpower_category.freebie_cost_spent)
-			willpower_category.freebie_cost_spent = 0
-		// Clear any leftover pool points so willpower always costs freebie points
+		net_spent = willpower_category.freebie_cost_spent
+		if(willpower_stat.starting_score == MAGE_MIN_WILLPOWER) // still in the mage state
+			net_spent -= (MAGE_STARTING_WILLPOWER - MAGE_MIN_WILLPOWER) * willpower_stat.freebie_point_cost
+		willpower_category.freebie_cost_spent = 0
 		willpower_category.set_points(0)
 
 	willpower_stat.min_score = 0
 	willpower_stat.starting_score = 0
 	willpower_stat.set_score(0)
+
+	if(freebie_stat)
+		if(net_spent > 0)
+			freebie_stat.increase_freebie_points(net_spent)
+		else if(net_spent < 0)
+			if(freebie_stat.can_decrease_freebie_points(-net_spent))
+				freebie_stat.decrease_freebie_points(-net_spent)
+			else
+				// reset if user has invalid fp
+				preferences.preference_storyteller_stats = list()
+				preferences.preference_storyteller_stats = create_new_stat_prefs(preferences.preference_storyteller_stats)
+				on_stats_rebuilt(user)
+
 	update_middleware_stats(preferences.preference_storyteller_stats)
+
+/datum/preference_middleware/proc/on_stats_rebuilt(mob/user)
+	var/datum/st_stat/freebie/freebie_points = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
+	if(freebie_points)
+		for(var/quirk_name in preferences.all_quirks)
+			var/datum/quirk/quirk_type = SSquirks.quirks[quirk_name]
+			if(!quirk_type)
+				continue
+			freebie_points.decrease_points(quirk_type.value)
+	apply_mage_willpower(user)
 
 /datum/preference_middleware/stats/proc/handle_mage_willpower_decrease()
 	var/splat = preferences.read_preference(/datum/preference/choiced/splats)
@@ -368,13 +306,39 @@
 	if(!arete_stat || !willpower_stat)
 		return
 
-	var/arete_score = arete_stat.get_pure_score()
-	var/willpower_score = willpower_stat.get_pure_score()
-	if(arete_score <= willpower_score)
+	var/excess = arete_stat.get_pure_score() - willpower_stat.get_pure_score()
+	if(excess <= 0)
 		return
 
 	var/datum/st_stat/freebie/freebie_stat = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
-	for(var/i in 1 to arete_score - willpower_score)
-		if(!arete_stat.decrease_score(1))
+	for(var/i in 1 to excess)
+		if(!arete_stat.can_decrease_score(1))
 			break
-		freebie_stat?.increase_freebie_points(arete_stat.freebie_point_cost)
+		// Arete has no pool category, so every dot above starting_score was paid for with freebies
+		if((arete_stat.get_pure_score() - 1) >= arete_stat.starting_score)
+			freebie_stat?.increase_freebie_points(arete_stat.freebie_point_cost)
+		arete_stat.decrease_score(1)
+
+	enforce_sphere_arete_cap()
+
+/datum/preference_middleware/proc/enforce_sphere_arete_cap()
+	var/datum/st_stat/arete/arete_stat = preferences.preference_storyteller_stats[/datum/st_stat/arete]
+	if(!arete_stat)
+		return
+
+	var/arete_score = arete_stat.get_pure_score()
+	var/datum/st_stat/sphere/sphere_category = preferences.preference_storyteller_stats[/datum/st_stat/sphere]
+	var/datum/st_stat/freebie/freebie_stat = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]
+
+	for(var/sphere_type in subtypesof(/datum/st_stat/sphere))
+		var/datum/st_stat/sphere/sphere_stat = preferences.preference_storyteller_stats[sphere_type]
+		if(!sphere_stat)
+			continue
+		while(sphere_stat.get_pure_score() > arete_score && sphere_stat.can_decrease_score(1))
+			if((sphere_stat.get_pure_score() - 1) >= sphere_stat.starting_score)
+				if(sphere_category && sphere_category.freebie_cost_spent >= sphere_stat.freebie_point_cost)
+					freebie_stat?.increase_freebie_points(sphere_stat.freebie_point_cost)
+					sphere_category.freebie_cost_spent -= sphere_stat.freebie_point_cost
+				else
+					sphere_category?.increase_points(1)
+			sphere_stat.decrease_score(1)

@@ -21,13 +21,21 @@
 			SPECIES_PERK_TYPE = SPECIES_POSITIVE_PERK,
 			SPECIES_PERK_ICON = FA_ICON_STAR,
 			SPECIES_PERK_NAME = "True Magick",
-			SPECIES_PERK_DESC = "...",
+			SPECIES_PERK_DESC = "Mages can do almost anything as long as they have enough dots in the \
+			right Spheres, which are capped by their Arete score.",
+		),
+		list(
+			SPECIES_PERK_TYPE = SPECIES_POSITIVE_PERK,
+			SPECIES_PERK_ICON = FA_ICON_BRAIN,
+			SPECIES_PERK_NAME = "Willworker",
+			SPECIES_PERK_DESC = "Mages begin 5 free dots in Permanent Willpower, which can be \
+			refunded to a minimum of 3. A Mage's Arete cannot be raised past their Permanent Willpower.",
 		),
 		/*list(
 			SPECIES_PERK_TYPE = SPECIES_NEUTRAL_PERK,
 			SPECIES_PERK_ICON = FA_ICON_PERSON,
 			SPECIES_PERK_NAME = "Mortal",
-			SPECIES_PERK_DESC = "...",
+			SPECIES_PERK_DESC = "Can do everything a normal human can do.",
 		),*/
 		list(
 			SPECIES_PERK_TYPE = SPECIES_NEGATIVE_PERK,

@@ -30,6 +30,12 @@
 	// Static data
 	var/datum/magick_effect_data/data
 
+	/*
+	 * I absolutely hate this language, I had a perfect workaround for making pseudo abstract static
+	 * variables by using initial() to pull vars from magick_effect_data until it turns out that
+	 * lists are not set during compile so this always returns empty list!!!!
+	 */
+
 	// Available sphere combinations for this effect
 	var/list/spheres
 
@@ -76,7 +82,6 @@
 					break
 			if (has_connection)
 				return FALSE
-			// No connection means this port is optional
 	return TRUE
 
 // For handling pre and post cast
@@ -100,15 +105,18 @@
 
 // Must override this for actually doing the effect
 /datum/magick_effect/proc/cast(datum/magick_context/context)
+	PROTECTED_PROC(TRUE)
 	return
 
 // Only override for custom handling of checking coincidental casting
 /datum/magick_effect/proc/pre_cast(datum/magick_context/context)
+	PROTECTED_PROC(TRUE)
 	return
 
 // Only override for custom handling of child nodes.
 // Uses the effect graph dictionary on the context set by the rote.
 /datum/magick_effect/proc/post_cast(datum/magick_context/context)
+	PROTECTED_PROC(TRUE)
 	var/alist/edges = context.effect_graph[src]
 	if (edges == null)
 		return
@@ -130,8 +138,6 @@
 			trigger_branches[out_port_key] = count
 
 	// fill ports and check is_ready() after each fill
-	var/alist/remaining_successes_by_port = new()
-	var/alist/remaining_branches_by_port = new()
 	for (var/out_port_key as anything in edges)
 		if (context.get(src, out_port_key) == null)
 			continue
@@ -171,6 +177,7 @@
 					child.__cast(context)
 
 /datum/magick_effect/proc/debug_to_user(datum/magick_context/context)
+	PRIVATE_PROC(TRUE)
 	to_chat(context.caster, span_info("DEBUG: --- [data::name] ([type]) ---"))
 	to_chat(context.caster, span_info("DEBUG: Global successes: [context.successes]"))
 	for (var/port_key as anything in inputs)

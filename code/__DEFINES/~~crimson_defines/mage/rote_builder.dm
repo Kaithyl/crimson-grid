@@ -1,9 +1,10 @@
 #define MAGICK_MAX_ROTES 15
 
+// These limitations are for performance reasons
+// do not change unless you are here to fine tune the limits!!
 #define MAGICK_MAX_NODES 20
 #define MAGICK_MAX_TRAVERSAL 50
 #define MAGICK_SLEEP_INTERVAL 8
-
 #define MAGICK_FOR_LOOP_MAX_LIST 20
 #define MAGICK_FOR_LOOP_MAX_BRANCHES 10
 

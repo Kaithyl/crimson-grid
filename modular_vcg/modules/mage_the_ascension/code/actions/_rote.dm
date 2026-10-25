@@ -25,11 +25,10 @@
 	var/quint_diff_reduction = 0
 
 	var/complexity
-	var/max_complexity
+	var/spheres
 
 	var/expected_success_cost = 0
 	var/expected_quint_cost = 0
-	var/spheres
 
 /datum/action/innate/rote/Trigger(mob/clicker, trigger_flags)
 	// datum/action requires parent function to be called
