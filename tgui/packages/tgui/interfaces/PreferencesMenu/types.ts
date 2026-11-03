@@ -86,6 +86,20 @@ export type DisciplineInfo = {
 };
 // DARKPACK EDIT END - DISCIPLINES
 
+// CRIMSONGRID EDIT ADD START - MAGE
+// See code/__DEFINES/~~crimson_defines/mage/mage_focus.dm
+export const PARADIGM_MYSTIC = 1 << 0;
+export const PARADIGM_TECHNOMANCER = 1 << 1;
+
+export type InstrumentInfo = {
+  name: string;
+  desc: string;
+  icon?: string;
+  icon_state?: string;
+  paradigms: number; // Bitflag
+};
+// CRIMSONGRID EDIT ADD END - MAGE
+
 export type Splats = {
   // DARKPACK EDIT ADD START - SPLATS
   name: string;
@@ -257,6 +271,14 @@ export type PreferencesMenuData = {
   highest_generation_limit: number;
   // DARKPACK EDIT ADD END - DISCIPLINES
 
+  // CRIMSONGRID EDIT ADD START - MAGE
+  instruments: Record<string, string>;
+  discarded_instruments: string[];
+  paradigm: number; // bitflag
+  instrument_discard_points: number;
+  instrument_discard_points_spent: number;
+  // CRIMSONGRID EDIT ADD END - MAGE
+
   // DARKPACK EDIT ADD START
   stats: Record<
     string,
@@ -310,5 +332,6 @@ export type ServerData = {
   splats: Record<string, Splats>;
   disciplines: Record<string, DisciplineInfo>;
   // DARKPACK EDIT END
+  instruments: Record<string, InstrumentInfo>; // CRIMSONGRID EDIT ADD - MAGE INSTRUMENTS
   [otherKey: string]: unknown;
 };

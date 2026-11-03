@@ -1,25 +1,3 @@
-#define SPHERE_CORRESPONDENCE "correspondence"
-#define SPHERE_ENTROPY "entropy"
-#define SPHERE_FORCES "forces"
-#define SPHERE_LIFE "life"
-#define SPHERE_MATTER "matter"
-#define SPHERE_MIND "mind"
-#define SPHERE_PRIME "prime"
-#define SPHERE_SPIRIT "spirit"
-#define SPHERE_TIME "time"
-
-#define ALL_SPHERES alist( \
-	SPHERE_CORRESPONDENCE = STAT_SPHERE_CORRESPONDENCE, \
-	SPHERE_ENTROPY = STAT_SPHERE_ENTROPY, \
-	SPHERE_FORCES = STAT_SPHERE_FORCES, \
-	SPHERE_LIFE = STAT_SPHERE_LIFE, \
-	SPHERE_MATTER = STAT_SPHERE_MATTER, \
-	SPHERE_MIND = STAT_SPHERE_MIND, \
-	SPHERE_PRIME = STAT_SPHERE_PRIME, \
-	SPHERE_SPIRIT = STAT_SPHERE_SPIRIT, \
-	SPHERE_TIME = STAT_SPHERE_TIME, \
-)
-
 #define MAX_SPHERE 5
 
 #define MAX_ARETE 10
@@ -29,3 +7,13 @@
 #define MAX_QUINTESSENCE_AND_PARADOX 20
 
 #define PARADOX_BACKLASH_THRESHOLD 5
+
+// 5% chance per each dot to trigger a backlash
+#define PARADOX_BACKLASH_PROB * 5
+
+// How many rotes a mage can make, for limiting action clutter
+#define MAGICK_MAX_ROTES 15
+
+// When each paradigm starts discarding instruments
+#define ARETE_DISCARD_INSTRUMENT_MYSTIC 3
+#define ARETE_DISCARD_INSTRUMENT_TECHNOMANCER 6

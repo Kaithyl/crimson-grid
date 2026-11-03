@@ -13,7 +13,8 @@ import { QuirkPersonalityPage } from './QuirksPage';
 import { SplatsPage } from './SplatsPage'; // DARKPACK EDIT CHANGE - SPLATS
 import { StatsPage } from './Stats'; // DARKPACK EDIT ADD
 import { DisciplinesPage } from './DisciplinesPage'; // DARKPACK EDIT ADD
-import { TrueMagickPage } from './TrueMagickPage'; // CRIMSONGRID EDIT ADD
+import { StatsMagePage } from './StatsMagePage' // CRIMSONGRID EDIT ADD
+import { FociPage } from './FociPage' // CRIMSONGRID EDIT ADD
 
 enum Page {
   Antags,
@@ -24,7 +25,8 @@ enum Page {
   Loadout,
   Stats, // DARKPACK EDIT ADD
   Disciplines, // DARKPACK EDIT ADD
-  TrueMagick, // CRIMSONGRID EDIT ADD
+  StatsMagePage, // CRIMSONGRID EDIT ADD
+  FociPage, // CRIMSONGRID EDIT ADD
 }
 
 type ProfileProps = {
@@ -124,8 +126,12 @@ export function CharacterPreferenceWindow(props) {
     // DARKPACK EDIT ADD END
 
     // CRIMSONGRID EDIT ADD START - Mage Stats
-    case Page.TrueMagick:
-      pageContents = <TrueMagickPage />
+    case Page.StatsMagePage:
+      pageContents = <StatsMagePage />
+      break;
+
+    case Page.FociPage:
+      pageContents = <FociPage />
       break;
     // CRIMSONGRID EDIT ADD END
 
@@ -200,15 +206,26 @@ export function CharacterPreferenceWindow(props) {
           {['splat_willworker', 'splat_technocrat'].includes(
             data.character_preferences.misc.splats,
           ) && (
-            <Stack.Item grow>
-              <PageButton
-                currentPage={currentPage}
-                page={Page.TrueMagick}
-                setPage={setCurrentPage}
-              >
-                True Magick
-              </PageButton>
-            </Stack.Item>
+            <>
+              <Stack.Item grow>
+                <PageButton
+                  currentPage={currentPage}
+                  page={Page.StatsMagePage}
+                  setPage={setCurrentPage}
+                >
+                  Mage - Stats
+                </PageButton>
+              </Stack.Item>
+              <Stack.Item grow>
+                <PageButton
+                  currentPage={currentPage}
+                  page={Page.FociPage}
+                  setPage={setCurrentPage}
+                >
+                  Mage - Foci
+                </PageButton>
+              </Stack.Item>
+            </>
           )}
           {
             // CRIMSONGRID EDIT END

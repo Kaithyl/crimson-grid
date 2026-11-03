@@ -10,6 +10,12 @@
 	/// Whether this player is whitelisted to bypass discipline sheet validation limits /// LEGACY
 	var/discipline_trusted = TRUE // CRIMSON EDIT CHANGE - Original: var/discipline_trusted = FALSE
 
+	// CRIMSONGRID EDIT ADD START - MAGE
+	// Associative list of spheres and their assigned instrument. like: list("correspondence" = "/datum/magick_focus/item/surgical_tool/scalpel")
+	var/list/focus_instruments = list()
+	// List of instrument typepaths that have been transcended (discarded)
+	var/list/discarded_instruments = list()
+	// CRIMSONGRID EDIT ADD END - MAGE
 
 /datum/preferences/load_preferences()
 	discipline_trusted = savefile.get_entry("discipline_trusted", FALSE) // deserialization and its consequences
@@ -63,6 +69,10 @@
 	guestbook_names = SANITIZE_LIST(guestbook_names)
 	alt_job_titles = save_data?["alt_job_titles"] // ALTERNATIVE_JOB_TITLES
 	discipline_levels = SANITIZE_LIST(save_data?["discipline_levels"]) || list()
+	// CRIMSONGRID EDIT ADD START - MAGE
+	focus_instruments = SANITIZE_LIST(save_data?["focus_instruments"]) || list()
+	discarded_instruments = SANITIZE_LIST(save_data?["discarded_instruments"]) || list()
+	// CRIMSONGRID EDIT ADD END - MAGE
 
 /datum/preferences/save_character()
 	. = ..()
@@ -74,4 +84,8 @@
 	save_data["guestbook_names"] = guestbook_names
 	save_data["alt_job_titles"] = alt_job_titles // ALTERNATIVE_JOB_TITLES
 	save_data["discipline_levels"] = discipline_levels
+	// CRIMSONGRID EDIT ADD START - MAGE
+	save_data["focus_instruments"] = focus_instruments
+	save_data["discarded_instruments"] = discarded_instruments
+	// CRIMSONGRID EDIT ADD END - MAGE
 	savefile.save()

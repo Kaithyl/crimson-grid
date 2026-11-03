@@ -1,16 +1,14 @@
 /*
- * TODO: Increase successes required depending on distance or line of sight
+ * TODO: Increase successes required depending on distance or sympathetic connection
  */
 
-// Remote effect
+// Ranged effect
 
-/datum/magick_effect_data/remote_effect
-	name = "Remote Effect"
-	desc = "Convert a target into the remote origin for an effect."
+/datum/magick_effect/ranged_effect
+	name = "Ranged Effect"
+	desc = "Convert a target into an origin for an effect."
 	tags = MAGICK_TAG_UTILITY
 	min_success_cost = 1
-/datum/magick_effect/remote_effect
-	data = /datum/magick_effect_data/remote_effect
 	spheres = list(
 		alist(
 			SPHERE_CORRESPONDENCE = 2,
@@ -29,22 +27,20 @@
 		out_origin = alist("name" = "Origin", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
-/datum/magick_effect/remote_effect/cast(datum/magick_context/context)
-	var/datum/magick_value/target = context.get(src, in_target)
+/datum/magick_effect/ranged_effect/cast(datum/magick_context/context)
+	var/datum/magick_value/target = context.get(in_target)
 	if (!target)
 		return
 	target.type_flags |= MAGICK_DATATYPE_FLAG_ORIGIN
-	context.assign(src, out_origin, target)
+	context.assign(out_origin, target)
 
 // Teleport (Self)
 
-/datum/magick_effect_data/teleport_self
+/datum/magick_effect/teleport_self
 	name = "Teleport (Self)"
 	desc = "Teleport the caster to the target's location."
 	tags = MAGICK_TAG_UTILITY
 	min_success_cost = 1
-/datum/magick_effect/teleport_self
-	data = /datum/magick_effect_data/teleport_self
 	spheres = list(
 		alist(
 			SPHERE_CORRESPONDENCE = 3,
@@ -62,7 +58,7 @@
 	)
 
 /datum/magick_effect/teleport_self/cast(datum/magick_context/context)
-	var/target = context.get_value(src, in_target)
+	var/target = context.get_value(in_target)
 	if (!target)
 		return
 

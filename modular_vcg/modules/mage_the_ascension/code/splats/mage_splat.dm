@@ -3,8 +3,13 @@
 
 	var/is_inverted = FALSE
 
-	var/quintessence = 0
+	var/datum/subsplat/mage_faction/faction
 
+	// Bitflags for the mage's complete paradigm
+	var/paradigm
+
+	// Resources
+	var/quintessence = 0
 	var/permanent_paradox = 0
 	var/paradox = 0
 
@@ -16,8 +21,6 @@
 	// Quint and WP expenditure for casting is in spell crafting instead of being a stance
 	var/datum/action/innate/rote_builder/rote_builder_action
 
-	//var/datum/subsplat/mage/paradigm
-
 	splat_priority = SPLAT_PRIO_MAGE
 
 	//splat_traits = list(TRAIT_AWAKENED)
@@ -26,6 +29,7 @@
 	incompatible_splats = list(/datum/splat/werewolf/shifter, /datum/splat/vampire/kindred)
 	can_frenzy = FALSE
 
+// TODO: Add a standby mode where splat is attatched to body to allow possessing admin spawns to properly become a mage
 /datum/splat/mage/on_gain()
 	. = ..()
 	if (owner.client)

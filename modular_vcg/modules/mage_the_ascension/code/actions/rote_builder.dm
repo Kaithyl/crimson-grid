@@ -10,6 +10,7 @@
 	// since this is a compromise between rotes and dynamic casting
 	//check_flags = NONE
 
+	// TODO: Move this into the splat instead
 	var/list/datum/action/innate/rote/rotes
 
 	allow_observer_click = TRUE
@@ -71,7 +72,7 @@
 	return data
 
 /datum/action/innate/rote_builder/ui_static_data(mob/user)
-	return GLOB.magick_effect_static_data
+	return GLOB.rotebuilder_static_effect_data
 
 /datum/action/innate/rote_builder/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
@@ -114,6 +115,7 @@
 			new_rote.rote_code = rote_code
 			new_rote.root_nodes = rote_data["root_nodes"]
 			new_rote.effect_graph = rote_data["effect_graph"]
+			new_rote.node_data = rote_data["node_data"]
 			new_rote.complexity = rote_data["complexity"]
 			new_rote.expected_success_cost = rote_data["expected_success_cost"]
 			new_rote.expected_quint_cost = rote_data["expected_quint_cost"]
@@ -137,14 +139,15 @@
 		validation_fail(user, "rote data has no 'nodes'/'connections' lists (raw: [copytext(rote_rawdata, 1, 256)])")
 		return null
 
-	var/list/effects = GLOB.magick_effect_static_data["effects"]
+	var/list/effects = GLOB.rotebuilder_static_effect_data["effects"]
 	var/list/type_counts = list()
 	var/list/known_ids = list()
 	var/list/types_by_id = list()
 	var/list/effect_instances = list()
 	var/list/connected_inputs = list()
-	var/list/datum/magick_effect/root/root_nodes = list()
+	var/list/root_nodes = list()
 	var/alist/effect_graph = new()
+	var/alist/node_data = new()
 	var/complexity_sum = 0
 	var/expected_success_cost = 0
 	var/expected_quint_cost = 0
@@ -191,45 +194,31 @@
 				validation_fail(user, "node #[node_count] (id '[id]', effect '[effect_data["name"]]') failed sphere requirements (sphere_index '[sphere_index]', options: [json_encode(options)])")
 				return null
 
-		// Create the effect instance
+		// Resolve the effect singleton
 		var/effect_type = text2path(effect_data["type"])
-		var/datum/magick_effect/effect = new effect_type()
+		var/datum/magick_effect/effect = GLOB.magick_effects[effect_type]
+		if(!effect)
+			validation_fail(user, "node #[node_count] (id '[id]') has unknown effect type '[effect_data["type"]]'")
+			return null
 
-		// Handle port values
+		// Build per-node data
+		var/datum/magick_node_data/node_data_entry = new()
+		node_data_entry.effect = effect
 		if(node["port_values"])
-			var/list/port_values = node["port_values"]
-			var/list/inputs_data = effect_data["inputs"]
-			//var/port_idx = 1
-			for(var/list/input_data in inputs_data)
-				// Handled during casting for now
-				/*var/port_name = input_data["name"]
-				var/raw_value = port_values["port_[port_name]"]
-				if(raw_value != null)
-					if(input_data["type"] & MAGICK_DATATYPE_NUMBER)
-						var/num_value = text2num(raw_value)
-						if(isnull(num_value))
-							return null
-						if(input_data["min_clamp"] != null && num_value < input_data["min_clamp"])
-							return null
-						if(input_data["max_clamp"] != null && num_value > input_data["max_clamp"])
-							return null
-					if(input_data["type"] & MAGICK_DATATYPE_STRING)
-						if(input_data["whitelist"] != null)
-							var/in_whitelist = FALSE
-							for(var/opt in input_data["whitelist"])
-								if(raw_value == opt)
-									in_whitelist = TRUE
-									break
-							if(!in_whitelist)
-								return null*/
-				//port_idx++
-			effect.port_values = port_values
+			node_data_entry.port_values = node["port_values"]
+		if(node["userdata"])
+			var/list/userdata = node["userdata"]
+			node_data_entry.label = userdata["label"]
+			node_data_entry.success_percentage = userdata["success_percentage"]
+			node_data_entry.min_success = userdata["min_success"]
+			node_data_entry.max_success = userdata["max_success"]
+		node_data[id] = node_data_entry
 
 		effect_instances[id] = effect
 
 		if(effect_data["tags"] & MAGICK_TAG_ROOT)
 			root_count++
-			root_nodes += effect
+			root_nodes += id
 
 		complexity_sum += effect_data["complexity"]
 		expected_success_cost += effect_data["min_success_cost"]
@@ -271,11 +260,11 @@
 		connected_inputs[in_id] = TRUE
 
 		// Build the effect graph dictionary
-		if(!effect_graph[source])
-			effect_graph[source] = alist()
-		if(!effect_graph[source][out_key])
-			effect_graph[source][out_key] = list()
-		effect_graph[source][out_key] += list(list(out_key, in_key, target))
+		if(!effect_graph[out_id])
+			effect_graph[out_id] = alist()
+		if(!effect_graph[out_id][out_key])
+			effect_graph[out_id][out_key] = list()
+		effect_graph[out_id][out_key] += list(list(out_key, in_key, in_id))
 
 	// Check for islands
 	for(var/id in known_ids)
@@ -294,13 +283,12 @@
 
 		if(has_required_input)
 			validation_fail(user, "node '[id]' ('[effect_data["name"]]') is unreachable but has required inputs")
-			for(var/datum/magick_effect/e as anything in effect_instances)
-				qdel(e)
 			return null
 
 	return alist(
 		"root_nodes" = root_nodes,
 		"effect_graph" = effect_graph,
+		"node_data" = node_data,
 		"complexity" = complexity_sum,
 		"expected_success_cost" = expected_success_cost,
 		"expected_quint_cost" = expected_quint_cost,

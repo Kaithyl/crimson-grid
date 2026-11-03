@@ -12,6 +12,7 @@ type RoteNodeRef = {
   type_index: number;
   sphere_index?: number;
   port_values?: Record<string, string>;
+  userdata?: NodeUserData;
 };
 
 type RoteConnectionRef = {
@@ -108,6 +109,7 @@ export const buildRoteData = (
     }
 
     if (userdata) {
+      nodeRef.userdata = userdata;
       const portValues: Record<string, string> = {};
       for (const [key, value] of Object.entries(userdata)) {
         if (key.startsWith('port_')) {

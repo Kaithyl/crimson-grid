@@ -5,7 +5,7 @@ import { AnimatedNumber, Button, Section, Stack, Tooltip, } from 'tgui-core/comp
 import type { PreferencesMenuData } from '../types';
 
 const KEY_SPHERE_POINTS = '/datum/st_stat/sphere';
-const KEY_FREEBIE_POINTS = '/datum/st_stat/freebie'
+const KEY_FREEBIE_POINTS = '/datum/st_stat/freebie';
 
 type MageStat = {
   name: string;
@@ -20,7 +20,7 @@ type MageStat = {
   abstract_type: string;
 };
 
-export function TrueMagickPage() {
+export function StatsMagePage() {
   const { act, data } = useBackend<PreferencesMenuData>();
   if (!data) return;
 
@@ -83,7 +83,7 @@ export function TrueMagickPage() {
         </Stack>
       </Stack.Item>
 
-      {/* Categories - Display advantages first */}
+      {/* Categories */}
       {Object.entries(grouped)
         .sort(([a], [b]) => {
           const order = ['advantage', 'sphere'];

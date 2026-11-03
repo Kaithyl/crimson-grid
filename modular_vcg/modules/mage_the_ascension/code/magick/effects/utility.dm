@@ -1,12 +1,10 @@
 // For each
 
-/datum/magick_effect_data/iterate_list
+/datum/magick_effect/iterate_list
 	name = "Iterate (List)"
-	desc = "Iterate over a list of targets, casting child nodes for each one."
+	desc = "Iterate over a list of targets."
 	tags = MAGICK_TAG_DATA
 	max_nodes = 1
-/datum/magick_effect/iterate_list
-	data = /datum/magick_effect_data/iterate_list
 
 	var/in_targets = "in_targets"
 	var/out_target = "out_target"
@@ -21,72 +19,46 @@
 	)
 
 /datum/magick_effect/iterate_list/post_cast(datum/magick_context/context)
-	var/list/datum/magick_value/targets = context.get(src, in_targets)
+	var/list/targets = context.get_value(in_targets)
 	if (!length(targets))
 		return
-
-	var/alist/effect_edges = context.effect_graph[src]
-	if (effect_edges == null)
+	if (context.effect_graph[context.current_node_id] == null)
 		return
 
-	var/children_processed = 0
-	for (var/out_port_key as anything in effect_edges)
-		if (children_processed >= MAGICK_FOR_LOOP_MAX_BRANCHES)
+	// split successes across each execution branch
+	var/remaining_successes = context.get_value(in_act) || 0
+	var/remaining_targets = min(length(targets), MAGICK_FOR_LOOP_MAX_LIST)
+
+	var/targets_processed = 0
+	for (var/datum/magick_value/target as anything in targets)
+		if (targets_processed >= MAGICK_FOR_LOOP_MAX_LIST)
+			break
+		if (context.nodes_traversed > MAGICK_MAX_TRAVERSAL)
 			break
 
-		if (context.get(src, out_port_key) == null)
-			continue
+		var/successes_for_target = max(1, round(remaining_successes / max(1, remaining_targets)))
 
-		var/list/connections = effect_edges[out_port_key]
-		var/remaining_successes = context.get_value(src, out_port_key)
-		var/remaining_targets = length(targets)
+		context.push_scope()
+		context.assign(out_target, target)
+		context.assign(out_act, successes_for_target, MAGICK_DATATYPE_TRIGGER)
 
-		for (var/list/tuple as anything in connections)
-			var/in_port_key = tuple[2]
-			var/datum/magick_effect/child = tuple[3]
+		var/before = context.successes
+		..() // execute child node within this branch's scope
+		var/consumed = before - context.successes
 
-			var/alist/child_inputs = child.inputs
-			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
-			if (in_port_def == null)
-				continue
+		context.pop_scope()
 
-			// Handle recursive casting for activate connections
-			var/targets_processed = 0
-			for (var/datum/magick_value/target in targets)
-				if (targets_processed >= MAGICK_FOR_LOOP_MAX_LIST)
-					break
-
-				var/successes_for_target = 0
-				if (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER && remaining_targets > 0)
-					successes_for_target = max(1, round(remaining_successes / remaining_targets))
-					context.assign(child, in_port_key, successes_for_target, MAGICK_DATATYPE_TRIGGER)
-				else
-					context.assign(child, in_port_key, target)
-
-				if (child.is_ready(context))
-					// Track how many successes the branch consumed so leftovers
-					// can be redistributed to remaining targets
-					var/before = context.successes
-					child.__cast(context)
-					var/after = context.successes
-					var/consumed = before - after
-					remaining_successes = max(0, remaining_successes - consumed)
-				else
-					remaining_successes = max(0, remaining_successes - successes_for_target)
-
-				targets_processed++
-				remaining_targets--
-		children_processed++
+		remaining_successes = max(0, remaining_successes - max(consumed, 0))
+		targets_processed++
+		remaining_targets--
 
 // Target mobs
 
-/datum/magick_effect_data/target_mobs
+/datum/magick_effect/target_mobs
 	name = "AOE Target (Mobs)"
 	desc = "Get all mobs within a maximum radius of 7 tiles from the target."
 	tags = MAGICK_TAG_DATA
 	max_nodes = 1
-/datum/magick_effect/target_mobs
-	data = /datum/magick_effect_data/target_mobs
 	spheres = list(
 		alist(
 			SPHERE_CORRESPONDENCE = 2,
@@ -108,18 +80,18 @@
 	)
 
 /datum/magick_effect/target_mobs/cast(datum/magick_context/context)
-	var/radius = context.get_value(src, in_radius)
-	var/target = context.get_value(src, in_target)
+	var/radius = context.get_value(in_radius)
+	var/target = context.get_value(in_target)
 
 	if (!target)
-		context.assign(src, out_targets, list(), MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+		context.assign(out_targets, list(), MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
 		return
 
 	var/list/targets = list()
 	for (var/mob/living/living_mob in range(radius, target))
 		targets += new /datum/magick_value(living_mob)
 
-	context.assign(src, out_targets, targets, MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+	context.assign(out_targets, targets, MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
 
 // Count
 

@@ -1,7 +1,6 @@
-// This is a workaround method to have abstract static variables
-// DO NOT INSTANTIATE THIS
-/datum/magick_effect_data/
-	abstract_type = /datum/magick_effect_data/
+// This holds the actual code execution for effects
+/datum/magick_effect/
+	abstract_type = /datum/magick_effect/
 
 	var/name
 	var/desc
@@ -23,19 +22,6 @@
 	// Mostly to prevent lag for costly effects
 	var/max_nodes
 
-// This holds the actual code execution for effects
-/datum/magick_effect/
-	abstract_type = /datum/magick_effect/
-
-	// Static data
-	var/datum/magick_effect_data/data
-
-	/*
-	 * I absolutely hate this language, I had a perfect workaround for making pseudo abstract static
-	 * variables by using initial() to pull vars from magick_effect_data until it turns out that
-	 * lists are not set during compile so this always returns empty list!!!!
-	 */
-
 	// Available sphere combinations for this effect
 	var/list/spheres
 
@@ -47,33 +33,20 @@
 	var/alist/inputs
 	var/alist/outputs
 
-	/*
-	 * These are userdata that are manually set by the player
-	 */
-
-	// Name given to effect node
-	var/label
-	// Success settings are only visible if can_add_success is true
-	// What percentage of global success to allocate
-	var/success_percentage
-	// Success die clamps
-	var/min_success
-	var/max_success
-
-	// alist<"port_[port_key]", value>
-	var/alist/port_values
+GLOBAL_LIST_INIT_TYPED(magick_effects, /datum/magick_effect, init_subtypes_w_path_keys(/datum/magick_effect, list()))
+GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_data())
 
 /datum/magick_effect/proc/is_ready(datum/magick_context/context)
 	var/alist/input_defs = src.inputs
 	for (var/port_key as anything in input_defs)
-		if (context.get(src, port_key) == null)
+		if (context.get(port_key) == null)
 			// Check if this port has an incoming connection in the effect graph
 			var/has_connection = FALSE
-			for (var/datum/magick_effect/source as anything in context.effect_graph)
-				var/alist/out_edges = context.effect_graph[source]
+			for (var/source_id as anything in context.effect_graph)
+				var/alist/out_edges = context.effect_graph[source_id]
 				for (var/out_port_key as anything in out_edges)
 					for (var/list/tuple as anything in out_edges[out_port_key])
-						if (tuple[3] == src && tuple[2] == port_key)
+						if (tuple[3] == context.current_node_id && tuple[2] == port_key)
 							has_connection = TRUE
 							break
 					if (has_connection)
@@ -108,7 +81,7 @@
 	PROTECTED_PROC(TRUE)
 	return
 
-// Only override for custom handling of checking coincidental casting
+// This will be for pre-processing data that will be used in cast
 /datum/magick_effect/proc/pre_cast(datum/magick_context/context)
 	PROTECTED_PROC(TRUE)
 	return
@@ -117,19 +90,21 @@
 // Uses the effect graph dictionary on the context set by the rote.
 /datum/magick_effect/proc/post_cast(datum/magick_context/context)
 	PROTECTED_PROC(TRUE)
-	var/alist/edges = context.effect_graph[src]
+	var/node_id = context.current_node_id
+	var/alist/edges = context.effect_graph[node_id]
 	if (edges == null)
 		return
 
 	// count trigger branches per output port for success splitting
 	var/alist/trigger_branches = new()
 	for (var/out_port_key as anything in edges)
-		if (context.get(src, out_port_key) == null)
+		if (context.get(out_port_key) == null)
 			continue
 		var/count = 0
 		for (var/list/tuple as anything in edges[out_port_key])
 			var/in_port_key = tuple[2]
-			var/datum/magick_effect/child = tuple[3]
+			var/child_id = tuple[3]
+			var/datum/magick_effect/child = context.get_effect(child_id)
 			var/alist/child_inputs = child.inputs
 			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
 			if (in_port_def != null && (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
@@ -139,16 +114,17 @@
 
 	// fill ports and check is_ready() after each fill
 	for (var/out_port_key as anything in edges)
-		if (context.get(src, out_port_key) == null)
+		if (context.get(out_port_key) == null)
 			continue
 
 		var/list/connections = edges[out_port_key]
-		var/remaining_successes = context.get_value(src, out_port_key)
+		var/remaining_successes = context.get_value(out_port_key)
 		var/remaining_branches = trigger_branches[out_port_key] || length(connections)
 
 		for (var/list/tuple as anything in connections)
 			var/in_port_key = tuple[2]
-			var/datum/magick_effect/child = tuple[3]
+			var/child_id = tuple[3]
+			var/datum/magick_effect/child = context.get_effect(child_id)
 
 			var/alist/child_inputs = child.inputs
 			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
@@ -158,7 +134,8 @@
 
 			if (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER && remaining_branches > 0)
 				var/successes_for_branch = max(1, round(remaining_successes / remaining_branches))
-				context.assign(child, in_port_key, successes_for_branch, MAGICK_DATATYPE_TRIGGER)
+				context.current_node_id = child_id
+				context.assign(in_port_key, successes_for_branch, MAGICK_DATATYPE_TRIGGER)
 				remaining_branches--
 
 				if (child.is_ready(context))
@@ -170,65 +147,61 @@
 				else
 					remaining_successes = max(0, remaining_successes - successes_for_branch)
 			else
-				context.assign(child, in_port_key, context.get(src, out_port_key))
+				var/parent_value = context.get(out_port_key)
+				context.current_node_id = child_id
+				context.assign(in_port_key, parent_value)
 				remaining_branches--
 
 				if (child.is_ready(context))
 					child.__cast(context)
+			context.current_node_id = node_id
 
 /datum/magick_effect/proc/debug_to_user(datum/magick_context/context)
 	PRIVATE_PROC(TRUE)
-	to_chat(context.caster, span_info("DEBUG: --- [data::name] ([type]) ---"))
+	to_chat(context.caster, span_info("DEBUG: --- [name] ([type]) ---"))
 	to_chat(context.caster, span_info("DEBUG: Global successes: [context.successes]"))
 	for (var/port_key as anything in inputs)
-		var/datum/magick_value/port_val = context.get(src, port_key)
+		var/datum/magick_value/port_val = context.get(port_key)
 		var/alist/port_def = inputs[port_key]
 		if (port_val != null)
 			to_chat(context.caster, span_info("DEBUG:   input '[port_def["name"]]' = [port_val.value]"))
 		else
 			to_chat(context.caster, span_info("DEBUG:   input '[port_def["name"]]' = EMPTY"))
 	for (var/port_key as anything in outputs)
-		var/datum/magick_value/port_val = context.get(src, port_key)
+		var/datum/magick_value/port_val = context.get(port_key)
 		var/alist/port_def = outputs[port_key]
 		if (port_val != null)
 			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = [port_val.value]"))
 		else
 			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = EMPTY"))
 
-/proc/init_magick_effect_static_data()
+// For UI
+/proc/init_rotebuilder_static_effect_data()
 	var/list/data = list()
 	var/list/effects_list = list()
 
-	for(var/datum/magick_effect/effect_type as anything in subtypesof(/datum/magick_effect/))
-
-		if (effect_type == effect_type::abstract_type)
+	for(var/effect_path in GLOB.magick_effects)
+		var/datum/magick_effect/effect = GLOB.magick_effects[effect_path]
+		if(!istype(effect))
 			continue
-
-		var/datum/magick_effect_data/effect = effect_type::data
-		if (effect == null)
-			continue
-
-		// Have to instantiate because getting initial var doesn't work on lists
-		var/datum/magick_effect/temp = new effect_type()
-
 		var/list/effect_data = list(
 			"name" = effect.name,
 			"desc" = effect.desc,
-			"type" = "[effect_type]",
+			"type" = "[effect.type]",
 			"tags" = effect.tags,
 			"quintessence" = effect.quintessence,
 			"complexity" = effect.complexity,
 			"max_nodes" = effect.max_nodes,
 			"min_success_cost" = effect.min_success_cost,
-			"spheres" = temp.spheres,
+			"spheres" = effect.spheres,
 			"can_add_success" = effect.can_add_success,
 		)
 
 		var/list/inputs_list = list()
 		var/list/outputs_list = list()
 
-		for(var/port_key as anything in temp.inputs)
-			var/alist/def = temp.inputs[port_key]
+		for(var/port_key as anything in effect.inputs)
+			var/alist/def = effect.inputs[port_key]
 			var/list/port_data = list(
 				"key" = port_key,
 				"name" = def["name"],
@@ -245,8 +218,8 @@
 				if (def["whitelist"] != null)
 					port_data["whitelist"] = def["whitelist"]
 			UNTYPED_LIST_ADD(inputs_list, port_data)
-		for(var/port_key as anything in temp.outputs)
-			var/alist/def = temp.outputs[port_key]
+		for(var/port_key as anything in effect.outputs)
+			var/alist/def = effect.outputs[port_key]
 			var/list/port_data = list(
 				"key" = port_key,
 				"name" = def["name"],
@@ -255,8 +228,6 @@
 				"default_value" = def["default_value"],
 			)
 			UNTYPED_LIST_ADD(outputs_list, port_data)
-
-		qdel(temp)
 
 		effect_data["inputs"] = inputs_list
 		effect_data["outputs"] = outputs_list
