@@ -32,6 +32,7 @@ export const ServerPrefs = createContext<ServerData | undefined>({
   splats: {},
   disciplines: {},
   // DARKPACK EDIT END
+  instruments: {}, // CRIMSONGRID EDIT ADD
 });
 
 export function useServerPrefs() {

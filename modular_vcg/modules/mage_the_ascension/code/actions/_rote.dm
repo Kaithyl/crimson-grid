@@ -5,20 +5,26 @@
 	ranged_mousepointer = 'icons/effects/mouse_pointers/weapon_pointer.dmi'
 	enable_text = span_notice("Select a target for your effect.")
 	disable_text = span_notice("You cancel your effect.")
+	check_flags = AB_CHECK_CONSCIOUS
+
+	// TODO: Make an actual rote class so this only needs to hold that
 
 	// Effect components
 	// TODO: Instruments used for casting
 	var/list/datum/magick_focus/foci
-	// Root nodes of the effect tree
-	var/list/datum/magick_effect/root/root_nodes
-	// alist<magick_effect, alist<output_port_key, list<list(out_port_key, in_port_key, child)>>>
+	// Root nodes of the effect tree (node ids)
+	var/list/root_nodes
+	// alist<node_id, alist<output_port_key, list<list(out_port_key, in_port_key, child_node_id)>>>
 	var/alist/effect_graph
+	// alist<node_id, /datum/magick_node_data>
+	// Per-node userdata configured in the rote builder
+	var/alist/node_data
 	// String format of effect graph for loading into UI
 	var/rote_code
 
 	// Casting
-	// Root nodes still awaiting target selection via crosshair
-	var/list/datum/magick_effect/root/pending_target_nodes
+	// Root node ids still awaiting target selection via crosshair
+	var/list/pending_target_nodes
 
 	// TODO: Make this right clickable icons on the action to toggle on/off
 	var/willpower_auto_success = FALSE
@@ -53,16 +59,19 @@
 		return TRUE
 
 	// Determine which root nodes need target selection
-	var/list/datum/magick_effect/root/needs_selection = list()
-	for (var/datum/magick_effect/root/node as anything in root_nodes)
-		if (node.needs_crosshair)
-			needs_selection += node
+	var/list/needs_selection = list()
+	for (var/node_id as anything in root_nodes)
+		var/datum/magick_node_data/node_data_entry = node_data ? node_data[node_id] : null
+		var/datum/magick_effect/root/node = node_data_entry?.effect
+		if (node?.needs_crosshair)
+			needs_selection += node_id
 
 	if (length(needs_selection))
 		// Enter ranged targeting mode with crosshair cursor
 		pending_target_nodes = needs_selection
-		var/datum/magick_effect/root/first_node = needs_selection[1]
-		enable_text = span_notice(MAGICK_TARGET_ENABLE_TEXT(first_node.label, length(pending_target_nodes)))
+		var/first_id = needs_selection[1]
+		var/datum/magick_node_data/first_data = node_data ? node_data[first_id] : null
+		enable_text = span_notice(MAGICK_TARGET_ENABLE_TEXT(first_data?.label, length(pending_target_nodes)))
 		set_ranged_ability(user, enable_text)
 		build_all_button_icons(UPDATE_BUTTON_STATUS)
 		return TRUE
@@ -79,18 +88,23 @@
 		unset_ranged_ability(user)
 		return FALSE
 
-	var/datum/magick_effect/root/node = pending_target_nodes[1]
+	var/node_id = pending_target_nodes[1]
+	var/datum/magick_node_data/node_data_entry = node_data ? node_data[node_id] : null
+	var/datum/magick_effect/root/node = node_data_entry?.effect
+	if (!node)
+		pending_target_nodes -= node_id
+		return TRUE
 
 	if (!node.is_valid_target(clicked_on, user))
-		to_chat(user, span_warning("That is not a valid target for [node.data.name]."))
+		to_chat(user, span_warning("That is not a valid target for [node.name]."))
 		return TRUE
 
 	// Assign the clicked atom as the target for the next pending root node
-	pending_target_nodes -= node
-	node.target = clicked_on
+	pending_target_nodes -= node_id
+	node_data_entry.target = clicked_on
 
 	if (length(pending_target_nodes))
-		to_chat(user, span_notice(MAGICK_TARGET_ENABLE_TEXT(node.label, length(pending_target_nodes))))
+		to_chat(user, span_notice(MAGICK_TARGET_ENABLE_TEXT(node_data_entry?.label, length(pending_target_nodes))))
 		return TRUE
 
 	// Cast when all targets have been assigned
@@ -99,27 +113,9 @@
 	return TRUE
 
 /datum/action/innate/rote/proc/clear()
-	var/list/datum/magick_effect/visited = list()
-	for (var/datum/magick_effect/root/node as anything in root_nodes)
-		clear_effect_tree(node, visited)
 	root_nodes = null
 	effect_graph = null
-
-/datum/action/innate/rote/proc/clear_effect_tree(datum/magick_effect/effect, list/datum/magick_effect/visited)
-	PRIVATE_PROC(TRUE)
-	if (effect in visited)
-		return
-	visited += effect
-
-	var/alist/effect_edges = effect_graph ? effect_graph[effect] : null
-	if (effect_edges)
-		for (var/out_port_key as anything in effect_edges)
-			var/list/connections = effect_edges[out_port_key]
-			for (var/list/tuple as anything in connections)
-				var/datum/magick_effect/child = tuple[3]
-				clear_effect_tree(child, visited)
-
-	qdel(effect)
+	node_data = null
 
 /datum/action/innate/rote/Remove(mob/removed_from)
 	if (removed_from.click_intercept == src)
@@ -137,10 +133,14 @@
 	// If foci empty return
 
 	// Auto-assign self-selecting root nodes
-	for (var/datum/magick_effect/root/node as anything in root_nodes)
+	for (var/node_id as anything in root_nodes)
+		var/datum/magick_node_data/node_data_entry = node_data ? node_data[node_id] : null
+		var/datum/magick_effect/root/node = node_data_entry?.effect
+		if (!node)
+			continue
 		var/target = node.resolve_target(clicker)
 		if (target)
-			node.target = target
+			node_data_entry.target = target
 
 	var/casting_without_focus = FALSE
 	var/difficulty = MAGICK_BASE_DIFFICULTY
@@ -213,36 +213,45 @@
 	context.caster = clicker
 	context.successes = successes
 	context.effect_graph = effect_graph
+	context.node_data = node_data
 
-	var/list/datum/magick_effect/visited = list()
-	for (var/datum/magick_effect/root/node as anything in root_nodes)
-		prefill_node_ports(node, context, visited)
+	var/list/visited = list()
+	for (var/node_id as anything in root_nodes)
+		prefill_node_ports(node_id, context, visited)
 
 	// Cast each root node with its assigned target
-	for (var/datum/magick_effect/root/node as anything in root_nodes)
+	for (var/node_id as anything in root_nodes)
+		context.current_node_id = node_id
+		var/datum/magick_effect/root/node = context.get_effect(node_id)
 		node.__cast(context)
 
-/datum/action/innate/rote/proc/prefill_node_ports(datum/magick_effect/effect, datum/magick_context/context, list/datum/magick_effect/visited)
+/datum/action/innate/rote/proc/prefill_node_ports(node_id, datum/magick_context/context, list/visited)
 	PRIVATE_PROC(TRUE)
-	if (effect in visited)
+	if (node_id in visited)
 		return
-	visited += effect
+	visited += node_id
 
-	if (effect.port_values)
+	var/datum/magick_node_data/node_data_entry = context.node_data ? context.node_data[node_id] : null
+	var/datum/magick_effect/effect = node_data_entry?.effect
+	if (!effect)
+		return
+
+	context.current_node_id = node_id
+	if (node_data_entry.port_values)
 		var/alist/input_defs = effect.inputs
 		for (var/port_key as anything in input_defs)
-			var/value = effect.port_values["port_[port_key]"]
-			if (value != null && context.get(effect, port_key) == null)
+			var/value = node_data_entry.port_values["port_[port_key]"]
+			if (value != null && context.get(port_key) == null)
 				var/alist/def = input_defs[port_key]
 				if (def["type"] & MAGICK_DATATYPE_NUMBER)
-					context.assign(effect, port_key, text2num(value), def["type"])
+					context.assign(port_key, text2num(value), def["type"])
 				else
-					context.assign(effect, port_key, value, def["type"])
+					context.assign(port_key, value, def["type"])
 
-	var/alist/effect_edges = context.effect_graph ? context.effect_graph[effect] : null
+	var/alist/effect_edges = context.effect_graph ? context.effect_graph[node_id] : null
 	if (effect_edges)
 		for (var/out_port_key as anything in effect_edges)
 			var/list/connections = effect_edges[out_port_key]
 			for (var/list/tuple as anything in connections)
-				var/datum/magick_effect/child = tuple[3]
-				prefill_node_ports(child, context, visited)
+				var/child_id = tuple[3]
+				prefill_node_ports(child_id, context, visited)

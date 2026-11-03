@@ -1,4 +1,8 @@
-// Trigger
+#define MAGICK_TARGET_ENABLE_TEXT(label, count) "Select the [label ? label : "next target"] for your spell. ([count] manual target selections remaining)."
+
+/// These are pre-defined port macros for magick effect nodes
+
+// Trigger - unlike TG's circuit system, the trigger pins carry the allocated number of successes for each execution branch
 
 #define MAGICK_PORT_ACTIVATE \
 	alist("name" = "Activate", "type" = MAGICK_DATATYPE_TRIGGER)

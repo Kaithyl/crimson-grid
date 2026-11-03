@@ -6,13 +6,11 @@
 
 // Fireball
 
-/datum/magick_effect_data/fireball
+/datum/magick_effect/fireball
 	name = "Fireball"
 	tags = MAGICK_TAG_DAMAGE
 	min_success_cost = 2
 	can_add_success = TRUE
-/datum/magick_effect/fireball
-	data = /datum/magick_effect_data/fireball
 	spheres = list(
 		alist(
 			SPHERE_FORCES = 3,
@@ -36,12 +34,12 @@
 /datum/magick_effect/fireball/cast(datum/magick_context/context)
 
 	// Temporary - TODO: Add getting + consuming successes handling to base _effect.dm
-	var/successes = context.get_value(src, in_act)
-	if (!successes || successes < data::min_success_cost)
+	var/successes = context.get_value(in_act)
+	if (!successes || successes < min_success_cost)
 		return
 
-	var/origin = context.get_value(src, in_origin)
-	var/target = context.get_value(src, in_target)
+	var/origin = context.get_value(in_origin)
+	var/target = context.get_value(in_target)
 
 	if (!origin || !target)
 		return
@@ -52,11 +50,13 @@
 	projectile.set_homing_target(target)
 	projectile.can_hit_turfs = TRUE
 
-	// remove all inaccuracy within line of sight distance
-	// TODO: If origin is also the caster, might scale this based on Dexterity + Athletics/Firearms?
-	// however, according to (M20, page 543) the caster can just create the fireball on the target when
-	// in line of sight without using correspondence, so with the added nerf for requiring correspondence
-	// to teleport a fireball directly on a target this seems like a fair trade-off
+	/*
+	 * TODO: If origin is also the caster, might scale this based on Dexterity + Athletics/Firearms?
+	 * however, according to (M20, page 543) the caster can just create the fireball on the target when
+	 * in line of sight without using correspondence, so with the added nerf for requiring correspondence
+	 * to teleport a fireball directly on a target giving it perfect accuracy/homing seems like a fair trade-off
+	 */
+	// removes all inaccuracy within line of sight distance
 	projectile.homing_turn_speed = 360
 	// accuracy formula: clamp(accurate_range - (accuracy_falloff * distance), 5, 100)
 	projectile.accurate_range = 100 + 7 * MAGICK_LINE_OF_SIGHT_DISTANCE
@@ -76,13 +76,11 @@
 
 // Lightning Bolt
 
-/datum/magick_effect_data/lightningbolt
+/datum/magick_effect/lightningbolt
 	name = "Lightning Bolt"
 	tags = MAGICK_TAG_DAMAGE
 	min_success_cost = 2
 	can_add_success = TRUE
-/datum/magick_effect/lightningbolt
-	data = /datum/magick_effect_data/lightningbolt
 	spheres = list(
 		alist(
 			SPHERE_FORCES = 3,
@@ -104,12 +102,12 @@
 	)
 
 /datum/magick_effect/lightningbolt/cast(datum/magick_context/context)
-	var/successes = context.get_value(src, in_act)
-	if (!successes || successes < data::min_success_cost)
+	var/successes = context.get_value(in_act)
+	if (!successes || successes < min_success_cost)
 		return
 
-	var/origin = context.get_value(src, in_origin)
-	var/target = context.get_value(src, in_target)
+	var/origin = context.get_value(in_origin)
+	var/target = context.get_value(in_target)
 
 	if (!origin || !target)
 		return
@@ -129,9 +127,10 @@
 	// apply successes
 	projectile.damage = 2 * (successes + 1) TTRPG_DAMAGE
 	projectile.damage_type = AGGRAVATED
-	// tesla_zap only uses zap_range for the first jump; each recursive jump instead
+	// tesla_zap only uses zap_range for the first jump. each recursive jump instead
 	// uses a hardcoded next_range of 5 (living) / 7 (silicons) and keeps chaining
 	// while power >= cutoff (1e3), so keep the power low so the chain dies out fast
+	// TODO: Make lightning child class that only overrides tesla zap
 	projectile.zap_power = 1000 + 500 * successes
 	projectile.zap_range = clamp(successes - 1, 1, 2)
 	projectile.zap_flags = ZAP_MOB_DAMAGE | ZAP_LOW_POWER_GEN
@@ -139,4 +138,3 @@
 		projectile.zap_flags |= ZAP_OBJ_DAMAGE
 
 	projectile.fire()
-
