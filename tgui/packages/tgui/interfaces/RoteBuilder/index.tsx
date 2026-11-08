@@ -1,128 +1,99 @@
 // THIS IS A DARKPACK UI FILE - CRIMSONGRID
-import { Button, Input } from 'tgui-core/components';
+// Based on tg's IntegratedCircuit UI
+import { useMemo, useRef, useState } from 'react';
 
 import { useBackend } from '../../backend';
 import { Window } from '../../layouts';
-
-import { MAX_ROTENAME_CHARS, MAX_NODES } from './constants';
-import { EffectsMenu } from './EffectsMenu';
-import { NodeSettingsMenu } from './NodeSettingsMenu';
-import { getUserData } from './rote/rote';
-import type { RoteBuilderData } from './types';
-import { useCanvas } from './useCanvas';
-import { useNodeSettings } from './useNodeSettings';
-import { useNodeHandler } from './useNodeHandler';
-import { useRoteHandler } from './useRoteHandler';
+import { EffectsMenu } from './lib/components/EffectsMenu';
+import { NodeCard } from './lib/components/NodeCard';
+import { NodeSettingsMenu } from './lib/components/NodeSettingsMenu';
+import { RoteCanvas } from './lib/components/RoteCanvas';
+import { SavePanel } from './lib/components/SavePanel';
+import { makePreviewNode } from './lib/graph';
+import { usePlacement } from './lib/hooks/usePlacement';
+import { useRoteEditor } from './lib/hooks/useRoteEditor';
+import { useViewport } from './lib/hooks/useViewport';
+import type { RoteBuilderData } from './lib/types';
 
 // @ts-ignore
-import 'drawflow/dist/drawflow.min.css';
-// @ts-ignore
-import '../../styles/interfaces/RoteBuilder.scss'; // Load this last to override default drawflow styles
-
-const DEFAULT_USERDATA = {
-  label: '',
-  success_percentage: 0,
-  min_success: 0,
-  max_success: 0,
-  sphere_index: 0,
-};
+import '../../styles/interfaces/RoteBuilder.scss';
 
 export const RoteBuilder = () => {
   const { act, data } = useBackend<RoteBuilderData>();
-  const { canvasRef, drawflowRef } = useCanvas();
+  const editor = useRoteEditor(data, act);
+  const viewport = useViewport();
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
 
-  const {
-    nodeData: nodesettings,
-    save: handlePopupSave,
-    close: handlePopupClose,
-  } = useNodeSettings(canvasRef);
-
-  const {
-    roteName,
-    setRoteName,
-    message,
-    roteStats,
-    roteCode,
-    viewOnly,
-    handleMessage,
-    refreshStats,
-    handleSave,
-  } = useRoteHandler({ drawflowRef, data, act });
-
-  const nodeHandlers = useNodeHandler({
-    drawflowRef,
-    effects: data.effects,
-    userStats: data.user_stats,
-    viewOnly,
-    onMessage: handleMessage,
-    onGraphChanged: refreshStats,
+  const placement = usePlacement({
+    canvasRef,
+    toPlane: viewport.toPlane,
+    disabled: editor.viewOnly,
+    onPlace: editor.placeEffect,
   });
+
+  const ghostEffect = placement.ghost?.effect;
+  const ghostNode = useMemo(() => ghostEffect && makePreviewNode(ghostEffect), [ghostEffect]);
+  const settingsNode = settingsId ? editor.graph.nodes[settingsId] : undefined;
 
   return (
     <Window title="Rote Builder" width={1200} height={800}>
       <Window.Content className="rote-builder__content">
         <div className="rote-builder">
-          <div
-            ref={canvasRef}
-            className="rote-builder__canvas"
-            onDragOver={nodeHandlers.onDragOver}
-            onDrop={nodeHandlers.onDrop}
+          <RoteCanvas
+            canvasRef={canvasRef}
+            graph={editor.graph}
+            dispatch={editor.dispatch}
+            viewport={viewport}
+            readOnly={editor.viewOnly}
+            shortcutsEnabled={!settingsNode}
+            onOpenSettings={setSettingsId}
           />
 
-          <EffectsMenu
-            effects={data.effects}
-            onDragStart={nodeHandlers.onDragStart}
-            onDragEnd={nodeHandlers.onDragEnd}
+          <EffectsMenu effects={data.effects} onPickUp={placement.pickUp} />
+
+          <SavePanel
+            roteName={editor.roteName}
+            onNameChange={editor.setRoteName}
+            stats={editor.stats}
+            roteCode={editor.roteCode}
+            viewOnly={editor.viewOnly}
+            onSave={editor.save}
           />
 
-          <div className="rote-builder__save-panel">
-            <div className="rote-builder__save-row">
-              {!viewOnly && (
-                <Input
-                  fluid
-                  className="rote-builder__save-name"
-                  placeholder="Rote name"
-                  value={roteName}
-                  maxLength={MAX_ROTENAME_CHARS}
-                  onChange={setRoteName}
-                />
-              )}
-              <div className="rote-builder__save-stats">
-                <div className="rote-builder__complexity">
-                  Complexity: {roteStats.complexity}
-                </div>
-                <div className="rote-builder__node-count">
-                  Nodes: {roteStats.node_count}/{MAX_NODES}
-                </div>
-              </div>
-              {!viewOnly && (
-                <Button icon="save" color="good" onClick={handleSave}>
-                  Save
-                </Button>
-              )}
-            </div>
-            {roteCode && (
-              <div className="rote-builder__rote-code">
-                <div className="rote-builder__rote-code-label">Code: </div>
-                <div className="rote-builder__rote-code-value" title={roteCode}>{roteCode}</div>
-              </div>
-            )}
-          </div>
-
-          {message && (
+          {editor.message && (
             <div
-              className={`rote-builder__message ${message.isError ? 'rote-builder__message--error' : 'rote-builder__message--ok'}`}
+              className={`rote-builder__message ${
+                editor.message.isError ? 'rote-builder__message--error' : 'rote-builder__message--ok'
+              }`}
             >
-              {message.text}
+              {editor.message.text}
             </div>
           )}
 
-          {nodesettings && (
+          {placement.ghost && ghostNode && (
+            <NodeCard
+              preview
+              node={ghostNode}
+              style={{
+                left: placement.ghost.x,
+                top: placement.ghost.y,
+                transform: `scale(${viewport.zoom})`,
+              }}
+            />
+          )}
+
+          {settingsNode && (
             <NodeSettingsMenu
-              effect={nodesettings.effect}
-              data={getUserData(nodesettings.nodeId) ?? DEFAULT_USERDATA}
-              onSave={handlePopupSave}
-              onClose={handlePopupClose}
+              key={settingsNode.id}
+              effect={settingsNode.effect}
+              settings={settingsNode.settings}
+              readOnly={editor.viewOnly}
+              onSave={(settings) => {
+                editor.dispatch({ type: 'settings', id: settingsNode.id, settings });
+                setSettingsId(null);
+              }}
+              onClose={() => setSettingsId(null)}
             />
           )}
         </div>

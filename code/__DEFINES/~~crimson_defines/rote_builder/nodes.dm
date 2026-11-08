@@ -6,8 +6,7 @@
 #define MAGICK_TAG_BUFF							(1<<4)
 #define MAGICK_TAG_DEBUFF						(1<<5)
 
-// These maximum limitations are for performance reasons
-// change if you want to fine tune the limits
+// These limits are for safety/performance reasons
 #define MAGICK_MAX_NODES 20
 #define MAGICK_MAX_TRAVERSAL 50
 #define MAGICK_SLEEP_INTERVAL 8

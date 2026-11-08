@@ -197,17 +197,14 @@
 	// and apply paradox penalty
 	// going to go with m1e difficulty and checking for paradox during cast
 
-	// roll arete with required_success
 
-	var/datum/storyteller_roll/arete = new()
+	var/datum/storyteller_roll/arete/arete = new()
 	arete.bumper_text = name
-	arete.numerical = TRUE
-	arete.roll_output_type = ROLL_PRIVATE
 	arete.difficulty = difficulty
 	//arete.spammy_roll = TRUE
-	arete.applicable_stats = list(STAT_ARETE)
+	arete.auto_successes = auto_successes + 10 //+10 temp for testing
 
-	var/successes = arete.st_roll(clicker, clicker, auto_successes)
+	var/successes = arete.st_roll(clicker, clicker)
 
 	var/datum/magick_context/context = new()
 	context.caster = clicker
@@ -255,3 +252,13 @@
 			for (var/list/tuple as anything in connections)
 				var/child_id = tuple[3]
 				prefill_node_ports(child_id, context, visited)
+
+// Temporarily putting this here
+/datum/storyteller_roll/arete
+	numerical = TRUE
+	roll_output_type = ROLL_PRIVATE
+	applicable_stats = list(STAT_ARETE)
+	var/auto_successes = 0
+
+/datum/storyteller_roll/arete/calculate_auto_successes(mob/living/roller)
+	. = ..() + auto_successes

@@ -1,3 +1,5 @@
+// THIS IS A DARKPACK UI FILE - CRIMSONGRID
+
 $node-pad-y: 10px;
 $node-pad-x: 14px;
 $node-border: 2px;
@@ -9,28 +11,57 @@ $ports-pad-top: 6px;
 
 $socket: 16px;
 $port-gap: 5px;
+$port-label-gap: 6px;
 
 $tooltip-gap: 6px;
 
-$ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
+// Distance from a port row's edge to the centre of the node border
+$socket-edge: $node-pad-x + $node-border * 0.5 + $socket * 0.5;
 
-/* Rote buider */
-.rote-builder {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
+$color-node-bg: rgba(20, 10, 30, 0.92);
+$color-node-bg-selected: rgba(45, 28, 60, 0.96);
+$color-border: #6a3d8f;
+$color-border-selected: #b06de8;
+$color-port-in: #e0c050;
+$color-port-out: #70c0ff;
+$color-port-invalid: #555;
 
 .rote-builder__content {
   background-image: none;
   padding: 0;
 }
 
+.rote-builder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  -ms-user-select: none;
+}
+
 .rote-builder__canvas {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+
+  // Keep wires visible past the bounds of InfinitePlane's inner container
+  svg {
+    overflow: visible;
+  }
 }
+
+// 0x0 marker at the plane's (0, 0). useViewport reads its screen rect.
+.rote-builder__origin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+// Effects menu
 
 .rote-builder__effects-menu {
   position: absolute;
@@ -59,17 +90,56 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   cursor: grab;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
   &:active {
     cursor: grabbing;
   }
 }
 
-.rote-drawflow-host {
-  width: 100%;
-  height: 100%;
+// Nodes
+
+.rote-node {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+
+  width: max-content;
+  min-width: 220px;
+  max-width: 320px;
+  padding: $node-pad-y $node-pad-x;
+
+  background: $color-node-bg;
+  color: #ddd;
+  border: $node-border solid $color-border;
+  border-radius: 6px;
+  overflow: visible;
+
+  &:hover {
+    cursor: move;
+    z-index: 10;
+  }
 }
 
-/* Rote nodes */
+.rote-node--selected {
+  z-index: 2;
+  background: $color-node-bg-selected;
+  border-color: $color-border-selected;
+  box-shadow: 0 0 0 2px rgba(176, 109, 232, 0.18);
+}
+
+// Ghost that follows the cursor while placing from the effects menu.
+// Uses client coordinates, so it has to be fixed rather than absolute.
+.rote-node--preview {
+  position: fixed;
+  z-index: 50;
+  transform-origin: 0 0;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 .rote-node__body {
   width: 100%;
   min-width: 0;
@@ -99,7 +169,8 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   text-overflow: ellipsis;
 }
 
-.rote-node__settings-icon {
+.rote-node__settings-icon,
+.rote-node__delete-icon {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -113,7 +184,9 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   cursor: pointer;
   opacity: 0.5;
   border-radius: 3px;
-  transition: opacity 100ms ease, background-color 100ms ease;
+  transition:
+    opacity 100ms ease,
+    background-color 100ms ease;
 
   &:hover {
     opacity: 1;
@@ -121,12 +194,18 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   }
 }
 
+.rote-node__delete-icon:hover {
+  background: #8a1f2d;
+}
+
 .rote-node__label {
+  margin-top: 2px;
+
   font-size: 11px;
   font-style: italic;
   color: #a8d8ea;
   line-height: 1.3;
-  margin-top: 2px;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -136,11 +215,14 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   display: none;
 }
 
+
+/* Node tooltip */
 .rote-node__tooltip {
   position: absolute;
   left: 50%;
   bottom: calc(100% + #{$node-border + $tooltip-gap});
   transform: translateX(-50%);
+  z-index: 100;
 
   width: max-content;
   max-width: 260px;
@@ -148,11 +230,13 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
 
   background: rgba(15, 10, 20, 0.97);
   color: #eee;
-  border: 1px solid #6a3d8f;
+  border: 1px solid $color-border;
   border-radius: 5px;
 
   font-size: 11px;
+  font-style: normal;
   line-height: 1.35;
+  white-space: normal;
 
   pointer-events: none;
   opacity: 0;
@@ -160,13 +244,14 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   transition:
     opacity 120ms ease,
     visibility 120ms ease;
-  z-index: 100;
 }
 
-.drawflow .drawflow-node:hover .rote-node__tooltip {
+.rote-node:not(.rote-node--preview):hover .rote-node__tooltip {
   opacity: 1;
   visibility: visible;
 }
+
+// Ports
 
 .rote-node__ports {
   display: flex;
@@ -191,20 +276,26 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   text-align: right;
 }
 
-/* Port labels */
+// Deliberately not positioned, so .rote-port__tooltip stays anchored to the node like before
 .rote-node__port-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: $port-label-gap;
 
   height: $socket;
   line-height: $socket;
+  min-width: 0;
 
   font-size: 11px;
   color: #bbb;
-
   white-space: nowrap;
-  min-width: 0;
+
+  > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .rote-node__port-col--in .rote-node__port-label {
@@ -215,145 +306,49 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   justify-content: flex-end;
 }
 
-.rote-node__port-label > span {
-  min-width: 0;
+// Sockets
 
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rote-port__value[type='number'] {
-  width: 27px;
-  flex: 0 0 27px;
-
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.rote-port__value[type='number']::-webkit-inner-spin-button,
-.rote-port__value[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* Port tooltip */
-.rote-port__tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 4px);
-  transform: translateX(-50%);
-
-  width: max-content;
-  max-width: 220px;
-  padding: 6px 8px;
-
-  background: rgba(15, 10, 20, 0.97);
-  color: #ccc;
-  border: 1px solid #6a3d8f;
-  border-radius: 4px;
-
-  font-size: 10px;
-  line-height: 1.3;
-
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 100ms ease,
-    visibility 100ms ease;
-  z-index: 100;
-}
-
-.rote-node__port-label:hover .rote-port__tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* drawflow */
-.drawflow .drawflow-node {
-  position: absolute;
-  box-sizing: border-box;
-  align-items: flex-start;
-  min-width: 220px;
-  max-width: 320px;
-  padding: $node-pad-y $node-pad-x;
-
-  background: rgba(20, 10, 30, 0.92);
-  color: #ddd;
-  border: $node-border solid #6a3d8f;
-  border-radius: 6px;
-  overflow: visible;
-}
-
-.drawflow .drawflow-node:hover {
-  cursor: move;
-  z-index: 10;
-}
-
-.drawflow .drawflow-node.selected {
-  background: rgba(45, 28, 60, 0.96);
-  border-color: #b06de8;
-  box-shadow: 0 0 0 2px rgba(176, 109, 232, 0.18);
-}
-
-.drawflow .drawflow-node .drawflow_content_node {
-  width: 100%;
-  min-width: 0;
-  display: block;
-}
-
-.drawflow .drawflow-node .inputs,
-.drawflow .drawflow-node .outputs {
-  width: 0;
-  flex-shrink: 0;
-  padding-top: $ports-offset;
-}
-
-/* Normal ports */
-.drawflow .drawflow-node .input,
-.drawflow .drawflow-node .output {
+.rote-port__socket {
   position: relative;
-  top: 0;
+  z-index: 5;
+  flex: 0 0 $socket;
   box-sizing: border-box;
 
   width: $socket;
   height: $socket;
-  margin: 0 0 $port-gap;
 
   border: 2px solid #111;
   border-radius: 50%;
 
   cursor: crosshair;
-  z-index: 5;
   transition:
     opacity 100ms ease,
     background-color 100ms ease;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
 
   &:hover {
     background: #fff;
   }
 }
 
-.drawflow .drawflow-node .input {
-  left: -($node-pad-x + $socket * 0.5 + $node-border * 0.5);
-  background: #e0c050;
+// Data sockets take up no width in the row and are shifted onto the node border.
+// Relative offsets still count toward offsetLeft/offsetTop, so wire endpoints measure correctly.
+.rote-port__socket--in {
+  background: $color-port-in;
+  margin-right: -($socket + $port-label-gap);
+  left: -$socket-edge;
 }
 
-.drawflow .drawflow-node .output {
-  right: -($node-pad-x * 0.5);
-  background: #70c0ff;
+.rote-port__socket--out {
+  order: 1; // after the name, at the right edge
+  background: $color-port-out;
+  margin-left: -($socket + $port-label-gap);
+  left: $socket-edge;
 }
 
-/* Activation ports */
-.drawflow .drawflow-node .input.rote-port--activate,
-.drawflow .drawflow-node .output.rote-port--activate {
+/* Trigger ports */
+.rote-port__socket.rote-port--activate {
   position: absolute;
-  top: $node-pad-y + ($title-h - $socket) * 0.5;
+  top: ($title-h - $socket) * 0.5 + $node-pad-y;
 
   width: $socket;
   height: $socket;
@@ -363,35 +358,53 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   border-radius: 0;
   clip-path: polygon(0 0, 100% 50%, 0 100%);
 
-  z-index: 5;
+  &.rote-port__socket--in {
+    left: -($socket * 0.5 + $node-border * 0.5);
+    right: auto;
+  }
+
+  &.rote-port__socket--out {
+    left: auto;
+    right: -($socket * 0.5 + $node-border * 0.5);
+  }
+
+  &:hover {
+    background: #fff;
+  }
 }
 
-.drawflow .drawflow-node .input.rote-port--activate {
-  left: -($socket * 0.5 + $node-border * 0.5);
-  right: auto;
-  background: #e0c050;
+// Connection hints
+
+.rote-port__socket.rote-port--invalid {
+  &,
+  &:hover {
+    background: $color-port-invalid;
+  }
+
+  cursor: not-allowed;
 }
 
-.drawflow .drawflow-node .output.rote-port--activate {
-  right: -($socket * 0.5 + $node-border * 0.5);
-  left: auto;
-  background: #70c0ff;
+// Trigger sockets aren't inside a label, so they get dimmed on their own.
+// Data sockets are already dimmed by their label, so they don't need it twice.
+.rote-port--activate.rote-port--invalid,
+.rote-node__port-label.rote-port--invalid {
+  opacity: 0.35;
 }
 
-/* Connection hints */
-.rote-port__value {
+// Port value inputs
+
+.rote-port__value,
+.rote-port__whitelist {
   flex: 0 0 55px;
+  box-sizing: border-box;
 
   width: 55px;
   height: 18px;
   padding: 1px 4px;
 
-  box-sizing: border-box;
-
   background: #150d1d;
   color: #ddd;
-
-  border: 1px solid #6a3d8f;
+  border: 1px solid $color-border;
   border-radius: 3px;
 
   font-size: 10px;
@@ -399,31 +412,83 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   text-align: left;
 
   outline: none;
-}
+  cursor: text;
+  user-select: text;
 
-.rote-port__value:focus {
-  outline: none;
-  border-color: #b06de8;
-}
-
-.rote-port__value:invalid {
-  border-color: #c94a5a;
-}
-
-.drawflow .drawflow-node .input.rote-port--invalid {
-  &, &:hover {
-    background: #555;
+  &:focus {
+    outline: none;
+    border-color: $color-border-selected;
   }
 
-  opacity: 0.35;
-  cursor: not-allowed;
+  &:invalid {
+    border-color: #c94a5a;
+  }
+
+  // Disabled while a wire feeds the port, and in view-only mode
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
 
-.rote-node__port-label.rote-port--invalid {
-  opacity: 0.35;
+.rote-port__whitelist {
+  flex-basis: auto;
+  width: auto;
+  max-width: 110px;
+  padding: 0 2px;
+  cursor: pointer;
 }
 
-/* Save panel */
+.rote-port__value[type='number'] {
+  flex: 0 0 27px;
+  width: 27px;
+
+  appearance: textfield;
+  -moz-appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* Port tooltip */
+.rote-port__tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  z-index: 100;
+
+  width: max-content;
+  max-width: 220px;
+  padding: 6px 8px;
+
+  background: rgba(15, 10, 20, 0.97);
+  color: #ccc;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: normal;
+  text-align: left;
+
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 100ms ease,
+    visibility 100ms ease;
+}
+
+.rote-node__port-label:hover .rote-port__tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+// Save panel
 .rote-builder__save-panel {
   position: absolute;
   top: 10px;
@@ -439,6 +504,7 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   background-color: rgba(0, 0, 0, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
+  user-select: text;
 }
 
 .rote-builder__save-row {
@@ -469,7 +535,47 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   color: #bbb;
 }
 
-/* Inline feedback messages */
+/* Rote code */
+.rote-builder__rote-code {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.rote-builder__rote-code-label {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: #888;
+}
+
+.rote-builder__rote-code-value {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 300px;
+  padding: 4px 6px;
+
+  background: #0a0a12;
+  color: #8af;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.4;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  user-select: all;
+  -webkit-user-select: all;
+  cursor: text;
+}
+
+// Popup messages
+
 .rote-builder__message {
   position: absolute;
   bottom: 16px;
@@ -495,43 +601,4 @@ $ports-offset: $title-h + $title-gap + $ports-divider + $ports-pad-top;
   background: rgba(20, 90, 20, 0.92);
   border: 1px solid #6f6;
   color: #fff;
-}
-
-/* Rote code */
-.rote-builder__rote-code {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  overflow: hidden;
-}
-
-.rote-builder__rote-code-label {
-  font-size: 11px;
-  color: #888;
-  flex: 0 0 auto;
-}
-
-.rote-builder__rote-code-value {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 300px;
-  padding: 4px 6px;
-
-  background: #0a0a12;
-  color: #8af;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-
-  font-family: monospace;
-  font-size: 11px;
-  line-height: 1.4;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  user-select: all;
-  -webkit-user-select: all;
-  cursor: text;
 }

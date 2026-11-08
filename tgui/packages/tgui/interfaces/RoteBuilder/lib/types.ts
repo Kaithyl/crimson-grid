@@ -1,3 +1,5 @@
+// DM Types
+
 export type RoteBuilderData = {
   user_stats: UserStats;
   effects: EffectData[];
@@ -48,11 +50,20 @@ export type EffectData = {
   [key: string]: unknown;
 };
 
-export type NodeUserData = {
+export type NodeUserData = NodeSettings & { [key: string]: unknown };
+
+// UI Types
+
+export type PortDir = 'in' | 'out';
+
+export type NodeSettings = {
   label: string;
   success_percentage: number;
   min_success: number;
   max_success: number;
   sphere_index: number;
-  [key: string]: unknown;
 };
+
+export type Position = { x: number; y: number };
+
+export type PortOffsets = Record<string, Position>;

@@ -51,7 +51,7 @@
 	projectile.can_hit_turfs = TRUE
 
 	/*
-	 * TODO: If origin is also the caster, might scale this based on Dexterity + Athletics/Firearms?
+	 * TODO: If origin is also the caster, scale this based on Dexterity + Athletics/Firearms?
 	 * however, according to (M20, page 543) the caster can just create the fireball on the target when
 	 * in line of sight without using correspondence, so with the added nerf for requiring correspondence
 	 * to teleport a fireball directly on a target giving it perfect accuracy/homing seems like a fair trade-off

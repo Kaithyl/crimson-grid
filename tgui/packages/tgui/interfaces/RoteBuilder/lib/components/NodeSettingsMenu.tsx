@@ -1,34 +1,32 @@
+// THIS IS A DARKPACK UI FILE - CRIMSONGRID
 import { useState } from 'react';
-
 import { Box, Button, Dropdown, Input, Modal, NumberInput, Section, Stack } from 'tgui-core/components';
 
-import type { EffectData, NodeUserData } from './types';
+import type { EffectData, NodeSettings } from '../types';
 
 type Props = {
   effect: EffectData;
-  data: NodeUserData;
-  onSave: (data: NodeUserData) => void;
+  settings: NodeSettings;
+  readOnly?: boolean;
+  onSave: (settings: NodeSettings) => void;
   onClose: () => void;
 };
 
-const sphereOptionText = (option: Record<string, number>): string =>
+const sphereOptionText = (option: Record<string, number>) =>
   Object.entries(option)
     .map(([sphere, level]) => `${sphere} ${level}`)
     .join(', ');
 
-export const NodeSettingsMenu = (props: Props) => {
-  const { effect, data, onSave, onClose } = props;
-
-  const [label, setLabel] = useState(data.label ?? '');
-  const [successPercentage, setSuccessPercentage] = useState(data.success_percentage ?? 0);
-  const [minSuccess, setMinSuccess] = useState(data.min_success ?? 0);
-  const [maxSuccess, setMaxSuccess] = useState(data.max_success ?? 0);
-  const [sphereIndex, setSphereIndex] = useState(data.sphere_index ?? 0);
+export const NodeSettingsMenu = ({ effect, settings, readOnly, onSave, onClose }: Props) => {
+  const [label, setLabel] = useState(settings.label);
+  const [successPercentage, setSuccessPercentage] = useState(settings.success_percentage);
+  const [minSuccess, setMinSuccess] = useState(settings.min_success);
+  const [maxSuccess, setMaxSuccess] = useState(settings.max_success);
+  const [sphereIndex, setSphereIndex] = useState(settings.sphere_index);
 
   const sphereOptions = (effect.spheres ?? []).map(sphereOptionText);
-  const canChooseSphere = sphereOptions.length > 1;
 
-  const handleSave = () => {
+  const save = () =>
     onSave({
       label,
       success_percentage: successPercentage,
@@ -36,12 +34,11 @@ export const NodeSettingsMenu = (props: Props) => {
       max_success: maxSuccess,
       sphere_index: sphereIndex,
     });
-  };
 
   return (
     <Modal>
       <Section
-        title="Settings"
+        title={readOnly ? 'Settings (view only)' : 'Settings'}
         buttons={
           <Button color="red" icon="window-close" onClick={onClose}>
             Cancel
@@ -53,12 +50,7 @@ export const NodeSettingsMenu = (props: Props) => {
             <Box color="label" mb={1}>
               Label
             </Box>
-            <Input
-              fluid
-              placeholder={effect.name}
-              value={label}
-              onChange={setLabel}
-            />
+            <Input fluid placeholder={effect.name} value={label} onChange={setLabel} />
           </Stack.Item>
 
           {sphereOptions.length > 0 && (
@@ -66,7 +58,7 @@ export const NodeSettingsMenu = (props: Props) => {
               <Box color="label" mb={1}>
                 Sphere Configuration
               </Box>
-              {canChooseSphere ? (
+              {sphereOptions.length > 1 ? (
                 <Dropdown
                   fluid
                   options={sphereOptions}
@@ -96,38 +88,28 @@ export const NodeSettingsMenu = (props: Props) => {
                   onChange={setSuccessPercentage}
                 />
               </Stack.Item>
-
               <Stack.Item>
                 <Box color="label" mb={1}>
                   Min Success
                 </Box>
-                <NumberInput
-                  value={minSuccess}
-                  minValue={0}
-                  step={1}
-                  onChange={setMinSuccess}
-                />
+                <NumberInput value={minSuccess} minValue={0} step={1} onChange={setMinSuccess} />
               </Stack.Item>
-
               <Stack.Item>
                 <Box color="label" mb={1}>
                   Max Success
                 </Box>
-                <NumberInput
-                  value={maxSuccess}
-                  minValue={0}
-                  step={1}
-                  onChange={setMaxSuccess}
-                />
+                <NumberInput value={maxSuccess} minValue={0} step={1} onChange={setMaxSuccess} />
               </Stack.Item>
             </>
           )}
 
           <Stack.Item textAlign="right">
             <Button onClick={onClose}>Cancel</Button>
-            <Button onClick={handleSave} color="good">
-              Save
-            </Button>
+            {!readOnly && (
+              <Button onClick={save} color="good">
+                Save
+              </Button>
+            )}
           </Stack.Item>
         </Stack>
       </Section>

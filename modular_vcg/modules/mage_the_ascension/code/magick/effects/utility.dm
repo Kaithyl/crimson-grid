@@ -18,7 +18,7 @@
 		out_target = MAGICK_PORT_TARGET,
 	)
 
-/datum/magick_effect/iterate_list/post_cast(datum/magick_context/context)
+/datum/magick_effect/iterate_list/post_cast(datum/magick_context/context, auto_activate = TRUE)
 	var/list/targets = context.get_value(in_targets)
 	if (!length(targets))
 		return
@@ -43,7 +43,7 @@
 		context.assign(out_act, successes_for_target, MAGICK_DATATYPE_TRIGGER)
 
 		var/before = context.successes
-		..() // execute child node within this branch's scope
+		..(context, FALSE)
 		var/consumed = before - context.successes
 
 		context.pop_scope()

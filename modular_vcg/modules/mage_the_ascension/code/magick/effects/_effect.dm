@@ -88,12 +88,18 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 
 // Only override for custom handling of child nodes.
 // Uses the effect graph dictionary on the context set by the rote.
-/datum/magick_effect/proc/post_cast(datum/magick_context/context)
+/datum/magick_effect/proc/post_cast(datum/magick_context/context, auto_activate = TRUE)
 	PROTECTED_PROC(TRUE)
 	var/node_id = context.current_node_id
 	var/alist/edges = context.effect_graph[node_id]
 	if (edges == null)
 		return
+
+	// Activate children by default
+	if (auto_activate && edges[out_act] && inputs?[in_act] && outputs?[out_act] && context.get(out_act) == null)
+		var/incoming = context.get_value(in_act)
+		if (incoming != null)
+			context.assign(out_act, incoming, MAGICK_DATATYPE_TRIGGER)
 
 	// count trigger branches per output port for success splitting
 	var/alist/trigger_branches = new()

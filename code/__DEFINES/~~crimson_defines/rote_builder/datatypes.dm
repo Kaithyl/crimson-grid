@@ -12,13 +12,14 @@
 #define MAGICK_DATATYPE_FLAG_LIST				(1<<23)
 
 // Any changes to this function should be reflected in
-// tgui\packages\tgui\interfaces\RoteBuilder\rote\port.ts\validConnection()
+// tgui\packages\tgui\interfaces\RoteBuilder\lib\ports.ts\validLink()
 #define MAGICK_DATATYPES_VALID(out_flags, in_flags) ( \
 	(((out_flags) & MAGICK_DATATYPE_TRIGGER) || ((in_flags) & MAGICK_DATATYPE_TRIGGER)) \
 		? ((((out_flags) & MAGICK_DATATYPE_TRIGGER) == ((in_flags) & MAGICK_DATATYPE_TRIGGER))) \
 		: ( \
 			((((out_flags) & ~(in_flags) & MAGICK_DATATYPE_ATOM) == 0)) \
-			&& ((((out_flags) & ~(in_flags) & ~MAGICK_DATATYPE_ATOM) == 0)) \
+			&& ((((out_flags) & ~(in_flags) & ~MAGICK_DATATYPE_ATOM & ~MAGICK_DATATYPE_FLAG_ORIGIN) == 0)) \
+			&& (!((in_flags) & MAGICK_DATATYPE_FLAG_ORIGIN) || ((out_flags) & MAGICK_DATATYPE_FLAG_ORIGIN)) \
 		) \
 )
 
