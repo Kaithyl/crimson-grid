@@ -2,10 +2,10 @@
 import { useState } from 'react';
 import { Box, Button, Dropdown, Input, Modal, NumberInput, Section, Stack } from 'tgui-core/components';
 
-import type { EffectData, NodeSettings } from '../types';
+import type { NodeData, NodeSettings } from '../types';
 
 type Props = {
-  effect: EffectData;
+  node: NodeData;
   settings: NodeSettings;
   readOnly?: boolean;
   onSave: (settings: NodeSettings) => void;
@@ -17,14 +17,14 @@ const sphereOptionText = (option: Record<string, number>) =>
     .map(([sphere, level]) => `${sphere} ${level}`)
     .join(', ');
 
-export const NodeSettingsMenu = ({ effect, settings, readOnly, onSave, onClose }: Props) => {
+export const NodeSettingsMenu = ({ node, settings, readOnly, onSave, onClose }: Props) => {
   const [label, setLabel] = useState(settings.label);
   const [successPercentage, setSuccessPercentage] = useState(settings.success_percentage);
   const [minSuccess, setMinSuccess] = useState(settings.min_success);
   const [maxSuccess, setMaxSuccess] = useState(settings.max_success);
   const [sphereIndex, setSphereIndex] = useState(settings.sphere_index);
 
-  const sphereOptions = (effect.spheres ?? []).map(sphereOptionText);
+  const sphereOptions = (node.spheres ?? []).map(sphereOptionText);
 
   const save = () =>
     onSave({
@@ -50,7 +50,7 @@ export const NodeSettingsMenu = ({ effect, settings, readOnly, onSave, onClose }
             <Box color="label" mb={1}>
               Label
             </Box>
-            <Input fluid placeholder={effect.name} value={label} onChange={setLabel} />
+            <Input fluid placeholder={node.name} value={label} onChange={setLabel} />
           </Stack.Item>
 
           {sphereOptions.length > 0 && (
@@ -74,7 +74,7 @@ export const NodeSettingsMenu = ({ effect, settings, readOnly, onSave, onClose }
             </Stack.Item>
           )}
 
-          {!!effect.can_add_success && (
+          {!!node.can_add_success && (
             <>
               <Stack.Item>
                 <Box color="label" mb={1}>

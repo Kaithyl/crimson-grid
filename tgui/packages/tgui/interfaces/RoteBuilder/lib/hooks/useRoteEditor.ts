@@ -3,7 +3,7 @@ import { useCallback, useMemo, useReducer, useState } from 'react';
 import { MAX_ROTENAME_CHARS } from '../constants';
 import { EMPTY_GRAPH, getStats, graphReducer } from '../graph';
 import { decodeRote, encodeRote, toRoteData } from '../serializer';
-import type { EffectData, Position, RoteBuilderData } from '../types';
+import type { NodeData, Position, RoteBuilderData } from '../types';
 import { placementError, validateRote } from '../validator';
 
 type Act = (action: string, payload?: Record<string, unknown>) => void;
@@ -13,7 +13,7 @@ const initEditor = (data: RoteBuilderData) => {
   if (!data.rote_data) {
     return { graph: EMPTY_GRAPH, message: null as UiMessage };
   }
-  const graph = decodeRote(data.rote_data, data.effects);
+  const graph = decodeRote(data.rote_data, data.nodes);
   return graph
     ? { graph, message: null as UiMessage }
     : { graph: EMPTY_GRAPH, message: { text: 'This rote could not be loaded.', isError: true } };
@@ -33,16 +33,16 @@ export const useRoteEditor = (data: RoteBuilderData, act: Act) => {
     setMessage(text ? { text, isError } : null);
   }, []);
 
-  const placeEffect = (effect: EffectData, at: Position) => {
+  const placeNode = (node: NodeData, at: Position) => {
     if (viewOnly) {
       return;
     }
-    const error = placementError(effect, stats, data.user_stats);
+    const error = placementError(node, stats, data.user_stats);
     if (error) {
       showMessage(error, true);
       return;
     }
-    dispatch({ type: 'add', effect, at });
+    dispatch({ type: 'add', node, at });
     showMessage('');
   };
 
@@ -58,15 +58,15 @@ export const useRoteEditor = (data: RoteBuilderData, act: Act) => {
       return showMessage('Your rote needs at least one node before it can be saved.', true);
     }
 
-    const validation = validateRote(graph, data.effects, data.user_stats);
+    const validation = validateRote(graph, data.nodes, data.user_stats);
     if (!validation.ok) {
       return showMessage(validation.error, true);
     }
 
-    const code = encodeRote(graph, data.effects);
+    const code = encodeRote(graph, data.nodes);
     act('save_rote', {
       name,
-      rote_data: JSON.stringify(toRoteData(graph, data.effects)),
+      rote_data: JSON.stringify(toRoteData(graph, data.nodes)),
       rote_code: code,
     });
     setRoteCode(code);
@@ -82,7 +82,7 @@ export const useRoteEditor = (data: RoteBuilderData, act: Act) => {
     setRoteName,
     roteCode,
     viewOnly,
-    placeEffect,
+    placeNode,
     save,
   };
 };

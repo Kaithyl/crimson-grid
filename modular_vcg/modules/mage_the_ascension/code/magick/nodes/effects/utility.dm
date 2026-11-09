@@ -1,6 +1,6 @@
 // For each
 
-/datum/magick_effect/iterate_list
+/datum/rote_node/effect/iterate_list
 	name = "Iterate (List)"
 	desc = "Iterate over a list of targets."
 	tags = MAGICK_TAG_DATA
@@ -18,7 +18,7 @@
 		out_target = MAGICK_PORT_TARGET,
 	)
 
-/datum/magick_effect/iterate_list/post_cast(datum/magick_context/context, auto_activate = TRUE)
+/datum/rote_node/effect/iterate_list/post_cast(datum/magick_context/context, auto_traverse = TRUE)
 	var/list/targets = context.get_value(in_targets)
 	if (!length(targets))
 		return
@@ -54,7 +54,7 @@
 
 // Target mobs
 
-/datum/magick_effect/target_mobs
+/datum/rote_node/effect/target_mobs
 	name = "AOE Target (Mobs)"
 	desc = "Get all mobs within a maximum radius of 7 tiles from the target."
 	tags = MAGICK_TAG_DATA
@@ -79,7 +79,7 @@
 		out_targets = alist("name" = "Targets (Mob)", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST),
 	)
 
-/datum/magick_effect/target_mobs/cast(datum/magick_context/context)
+/datum/rote_node/effect/target_mobs/cast(datum/magick_context/context)
 	var/radius = context.get_value(in_radius)
 	var/target = context.get_value(in_target)
 
@@ -95,20 +95,20 @@
 
 // Count
 
-/*/datum/magick_effect/count
+/*/datum/rote_node/effect/count
 	name = "Count"
 	tags = MAGICK_TAG_DATA
 
 	var/datum/magick_port/input/in_list = MAGICK_PORT_TARGETS
 	var/datum/magick_port/output/out_num = MAGICK_PORT_NUMBER
 
-/datum/magick_effect/count/cast(datum/magick_context/context)
+/datum/rote_node/effect/count/cast(datum/magick_context/context)
 	var/list/targets = in_list.get_value(context)
 	out_num.assign(context, length(targets))*/
 
 // Add
 
-/*/datum/magick_effect/add
+/*/datum/rote_node/effect/add
 	name = "Add"
 	tags = MAGICK_TAG_DATA
 
@@ -116,7 +116,7 @@
 	var/datum/magick_port/input/in_b = MAGICK_PORT_NUMBER
 	var/datum/magick_port/output/out_sum = MAGICK_PORT_NUMBER
 
-/datum/magick_effect/add/cast(datum/magick_context/context)
+/datum/rote_node/effect/add/cast(datum/magick_context/context)
 	var/a = context.get(in_a)
 	var/b = context.get(in_b)
 	context.assign(out_sum, a + b, MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE)*/

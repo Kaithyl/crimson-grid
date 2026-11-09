@@ -4,7 +4,7 @@
 
 // Ranged effect
 
-/datum/magick_effect/ranged_effect
+/datum/rote_node/effect/ranged_effect
 	name = "Ranged Effect"
 	desc = "Convert a target into an origin for an effect."
 	tags = MAGICK_TAG_UTILITY
@@ -27,7 +27,7 @@
 		out_origin = alist("name" = "Origin", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
-/datum/magick_effect/ranged_effect/cast(datum/magick_context/context)
+/datum/rote_node/effect/ranged_effect/cast(datum/magick_context/context)
 	var/datum/magick_value/target = context.get(in_target)
 	if (!target)
 		return
@@ -36,7 +36,7 @@
 
 // Teleport (Self)
 
-/datum/magick_effect/teleport_self
+/datum/rote_node/effect/teleport_self
 	name = "Teleport (Self)"
 	desc = "Teleport the caster to the target's location."
 	tags = MAGICK_TAG_UTILITY
@@ -57,7 +57,7 @@
 		out_act = MAGICK_PORT_ACTIVATE,
 	)
 
-/datum/magick_effect/teleport_self/cast(datum/magick_context/context)
+/datum/rote_node/effect/teleport_self/cast(datum/magick_context/context)
 	var/target = context.get_value(in_target)
 	if (!target)
 		return

@@ -4,9 +4,9 @@ import { useMemo, useRef, useState } from 'react';
 
 import { useBackend } from '../../backend';
 import { Window } from '../../layouts';
-import { EffectsMenu } from './lib/components/EffectsMenu';
 import { NodeCard } from './lib/components/NodeCard';
 import { NodeSettingsMenu } from './lib/components/NodeSettingsMenu';
+import { NodesMenu } from './lib/components/NodesMenu';
 import { RoteCanvas } from './lib/components/RoteCanvas';
 import { SavePanel } from './lib/components/SavePanel';
 import { makePreviewNode } from './lib/graph';
@@ -29,11 +29,14 @@ export const RoteBuilder = () => {
     canvasRef,
     toPlane: viewport.toPlane,
     disabled: editor.viewOnly,
-    onPlace: editor.placeEffect,
+    onPlace: editor.placeNode,
   });
 
-  const ghostEffect = placement.ghost?.effect;
-  const ghostNode = useMemo(() => ghostEffect && makePreviewNode(ghostEffect), [ghostEffect]);
+  const ghostNodeData = placement.ghost?.node;
+  const ghostNode = useMemo(
+    () => ghostNodeData && makePreviewNode(ghostNodeData),
+    [ghostNodeData],
+  );
   const settingsNode = settingsId ? editor.graph.nodes[settingsId] : undefined;
 
   return (
@@ -50,7 +53,7 @@ export const RoteBuilder = () => {
             onOpenSettings={setSettingsId}
           />
 
-          <EffectsMenu effects={data.effects} onPickUp={placement.pickUp} />
+          <NodesMenu nodes={data.nodes} onPickUp={placement.pickUp} />
 
           <SavePanel
             roteName={editor.roteName}
@@ -86,7 +89,7 @@ export const RoteBuilder = () => {
           {settingsNode && (
             <NodeSettingsMenu
               key={settingsNode.id}
-              effect={settingsNode.effect}
+              node={settingsNode.node}
               settings={settingsNode.settings}
               readOnly={editor.viewOnly}
               onSave={(settings) => {

@@ -71,7 +71,7 @@ const ZoomControls = (props: ZoomControlsProps) => {
   );
 };
 
-export const EffectsPlane = (props: Props) => {
+export const RotePlane = (props: Props) => {
   const {
     backgroundImage,
     children,

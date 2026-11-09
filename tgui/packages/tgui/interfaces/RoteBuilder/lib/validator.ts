@@ -2,7 +2,7 @@
 import { MAX_NODES, TAG_ROOT } from './constants';
 import type { RoteGraph, RoteStats } from './graph';
 import { findPort, validLink } from './ports';
-import type { EffectData, UserStats } from './types';
+import type { NodeData, UserStats } from './types';
 
 export type ValidationResult = { ok: true } | { ok: false; error: string };
 
@@ -14,65 +14,65 @@ const hasSpheres = (option: Record<string, number>, userStats: UserStats) =>
 
 // Temporary
 export const placementError = (
-  effect: EffectData,
+  node: NodeData,
   stats: RoteStats,
   userStats: UserStats,
 ): string | null => {
   if (stats.node_count >= MAX_NODES) {
     return `You can't have more than ${MAX_NODES} nodes.`;
   }
-  if (effect.max_nodes && (stats.nodes[effect.type] ?? 0) >= effect.max_nodes) {
-    return `You can't add more than ${effect.max_nodes} of "${effect.name}" to a rote.`;
+  if (node.max_nodes && (stats.nodes[node.type] ?? 0) >= node.max_nodes) {
+    return `You can't add more than ${node.max_nodes} of "${node.name}" to a rote.`;
   }
-  if (effect.spheres?.length && !effect.spheres.some((o) => hasSpheres(o, userStats))) {
-    return `You don't have the required spheres for "${effect.name}".`;
+  if (node.spheres?.length && !node.spheres.some((o) => hasSpheres(o, userStats))) {
+    return `You don't have the required spheres for "${node.name}".`;
   }
   return null;
 };
 
 export const validateRote = (
   graph: RoteGraph,
-  effects: EffectData[],
+  nodes: NodeData[],
   userStats: UserStats,
 ): ValidationResult => {
-  const nodes = graph.order.map((id) => graph.nodes[id]);
-  if (nodes.length === 0) {
+  const graphNodes = graph.order.map((id) => graph.nodes[id]);
+  if (graphNodes.length === 0) {
     return { ok: false, error: 'Your rote needs at least one node.' };
   }
-  if (nodes.length > MAX_NODES) {
+  if (graphNodes.length > MAX_NODES) {
     return { ok: false, error: `Your rote can't have more than ${MAX_NODES} nodes.` };
   }
 
-  const known = new Set(effects.map((effect) => effect.type));
+  const known = new Set(nodes.map((node) => node.type));
   const countByType: Record<string, number> = {};
   let rootCount = 0;
 
-  for (const { effect, settings } of nodes) {
-    if (!known.has(effect.type)) {
-      return { ok: false, error: 'Your rote contains an unknown effect.' };
+  for (const { node, settings } of graphNodes) {
+    if (!known.has(node.type)) {
+      return { ok: false, error: 'Your rote contains an unknown node.' };
     }
 
-    const current = countByType[effect.type] ?? 0;
-    if (effect.max_nodes && current >= effect.max_nodes) {
+    const current = countByType[node.type] ?? 0;
+    if (node.max_nodes && current >= node.max_nodes) {
       return {
         ok: false,
-        error: `You can't add more than ${effect.max_nodes} of "${effect.name}" to a rote.`,
+        error: `You can't add more than ${node.max_nodes} of "${node.name}" to a rote.`,
       };
     }
-    countByType[effect.type] = current + 1;
+    countByType[node.type] = current + 1;
 
-    if (effect.tags & TAG_ROOT) {
+    if (node.tags & TAG_ROOT) {
       rootCount++;
     }
 
-    if (effect.spheres?.length) {
-      const option = effect.spheres[settings.sphere_index];
+    if (node.spheres?.length) {
+      const option = node.spheres[settings.sphere_index];
       if (!option) {
-        return { ok: false, error: `Invalid sphere configuration for "${effect.name}".` };
+        return { ok: false, error: `Invalid sphere configuration for "${node.name}".` };
       }
       for (const [sphere, required] of Object.entries(option)) {
         if ((Number(userStats[sphere]) || 0) < required) {
-          return { ok: false, error: `You need ${sphere} ${required} for "${effect.name}".` };
+          return { ok: false, error: `You need ${sphere} ${required} for "${node.name}".` };
         }
       }
     }
@@ -89,19 +89,19 @@ export const validateRote = (
     if (!outNode || !inNode) {
       return { ok: false, error: 'Your rote contains a broken connection.' };
     }
-    const outPort = findPort(outNode.effect, 'out', wire.outPort);
-    const inPort = findPort(inNode.effect, 'in', wire.inPort);
+    const outPort = findPort(outNode.node, 'out', wire.outPort);
+    const inPort = findPort(inNode.node, 'in', wire.inPort);
     if (!outPort || !inPort || !validLink(outPort, inPort)) {
       // DO NOT REMOVE THIS
-      //const dbg = `DEBUG: bad link '${outNode.effect.name}' output port ${wire.outPort} ('${outPort?.name ?? 'MISSING'}', type ${outPort?.type ?? 'N/A'}) -> '${inNode.effect.name}' input port ${wire.inPort} ('${inPort?.name ?? 'MISSING'}', type ${inPort?.type ?? 'N/A'}). validLink=${outPort && inPort ? validLink(outPort, inPort) : false}`;
+      //const dbg = `DEBUG: bad link '${outNode.node.name}' output port ${wire.outPort} ('${outPort?.name ?? 'MISSING'}', type ${outPort?.type ?? 'N/A'}) -> '${inNode.node.name}' input port ${wire.inPort} ('${inPort?.name ?? 'MISSING'}', type ${inPort?.type ?? 'N/A'}). validLink=${outPort && inPort ? validLink(outPort, inPort) : false}`;
       //return { ok: false, error: dbg };
       return { ok: false, error: 'Your rote contains an invalid connection.' };
     }
     fed.add(wire.inNode);
   }
 
-  for (const { id, effect } of nodes) {
-    if (!(effect.tags & TAG_ROOT) && !fed.has(id)) {
+  for (const { id, node } of graphNodes) {
+    if (!(node.tags & TAG_ROOT) && !fed.has(id)) {
       return { ok: false, error: 'Your rote contains unreachable nodes.' };
     }
   }

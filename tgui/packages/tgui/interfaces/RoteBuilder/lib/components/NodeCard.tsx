@@ -38,7 +38,7 @@ type Props = {
 const NO_LINKS: ReadonlySet<string> = new Set();
 const stopPropagation = (e: SyntheticEvent) => e.stopPropagation();
 
-const effectClass = (type: string) => `rote-effect--${String(type).split('/').pop()}`;
+const nodeClass = (type: string) => `rote-effect--${String(type).split('/').pop()}`;
 
 const defaultText = (port: PortData) =>
   port.default_value === null || port.default_value === undefined ? '' : String(port.default_value);
@@ -61,7 +61,7 @@ export const NodeCard = memo((props: Props) => {
     onSetValue,
     onMeasure,
   } = props;
-  const { id, effect, settings, values } = node;
+  const { id, node: nodeData, settings, values } = node;
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   // Report where each port's centre sits inside this node. This runs again only when
@@ -91,7 +91,7 @@ export const NodeCard = memo((props: Props) => {
       observer?.disconnect();
       onMeasure(id, null);
     };
-  }, [id, effect, preview, onMeasure]);
+  }, [id, nodeData, preview, onMeasure]);
 
   const renderPort = (dir: PortDir, port: PortData) => {
     const handle: PortHandle = { nodeId: id, dir, port };
@@ -113,9 +113,9 @@ export const NodeCard = memo((props: Props) => {
     );
   };
 
-  const inputs = portsOf(effect, 'in');
-  const outputs = portsOf(effect, 'out');
-  const desc = String(effect.desc ?? '').trim();
+  const inputs = portsOf(nodeData, 'in');
+  const outputs = portsOf(nodeData, 'out');
+  const desc = String(nodeData.desc ?? '').trim();
 
   return (
     <div
@@ -123,7 +123,7 @@ export const NodeCard = memo((props: Props) => {
       className={classes([
         'rote-node',
         'rote-effect',
-        effectClass(effect.type),
+        nodeClass(nodeData.type),
         selected && 'rote-node--selected',
         preview && 'rote-node--preview',
       ])}
@@ -136,7 +136,7 @@ export const NodeCard = memo((props: Props) => {
       <div className="rote-node__body">
         <div className="rote-node__header">
           <div className="rote-node__title-row">
-            <span className="rote-node__title-text">{effect.name}</span>
+            <span className="rote-node__title-text">{nodeData.name}</span>
             <span
               className="rote-node__settings-icon"
               title="Edit node settings"

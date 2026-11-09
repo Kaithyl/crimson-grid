@@ -6,7 +6,7 @@ import {
 import { ROTE_CODE_HEADER } from './constants';
 import { DEFAULT_SETTINGS, type RoteGraph, type RoteNode, type Wire } from './graph';
 import { findPort } from './ports';
-import type { EffectData, NodeSettings, NodeUserData } from './types';
+import type { NodeData, NodeSettings, NodeUserData } from './types';
 
 const PORT_VALUE_PREFIX = 'port_';
 
@@ -27,14 +27,14 @@ type RoteCode = {
   connections: DMConnection[];
 };
 
-const typeIndexer = (effects: EffectData[]) => {
+const typeIndexer = (nodes: NodeData[]) => {
   const map = new Map<string, number>();
-  effects.forEach((effect, i) => {
-    if (!map.has(effect.type)) {
-      map.set(effect.type, i + 1);
+  nodes.forEach((node, i) => {
+    if (!map.has(node.type)) {
+      map.set(node.type, i + 1);
     }
   });
-  return (effect: EffectData) => map.get(effect.type) ?? 0;
+  return (node: NodeData) => map.get(node.type) ?? 0;
 };
 
 const toPortValues = (values: Record<string, string>) => {
@@ -61,16 +61,16 @@ const orderedNodes = (graph: RoteGraph) => graph.order.map((id) => graph.nodes[i
 
 const roundPos = (value: number) => Math.round((value || 0) * 10) / 10;
 
-export const toRoteData = (graph: RoteGraph, effects: EffectData[]): DMRoteData => {
-  const indexOf = typeIndexer(effects);
+export const toRoteData = (graph: RoteGraph, nodes: NodeData[]): DMRoteData => {
+  const indexOf = typeIndexer(nodes);
   return {
     nodes: orderedNodes(graph).map((node) => {
       const ref: DMNode = {
         id: node.id,
-        type_index: indexOf(node.effect),
+        type_index: indexOf(node.node),
         userdata: toUserData(node),
       };
-      if (node.effect.spheres?.length) {
+      if (node.node.spheres?.length) {
         ref.sphere_index = node.settings.sphere_index + 1;
       }
       if (Object.keys(node.values).length > 0) {
@@ -82,12 +82,12 @@ export const toRoteData = (graph: RoteGraph, effects: EffectData[]): DMRoteData 
   };
 };
 
-export const encodeRote = (graph: RoteGraph, effects: EffectData[]): string => {
-  const indexOf = typeIndexer(effects);
+export const encodeRote = (graph: RoteGraph, nodes: NodeData[]): string => {
+  const indexOf = typeIndexer(nodes);
   const code: RoteCode = {
     nodes: orderedNodes(graph).map((node) => ({
       id: node.id,
-      type_index: indexOf(node.effect),
+      type_index: indexOf(node.node),
       pos_x: roundPos(node.x),
       pos_y: roundPos(node.y),
       userdata: toUserData(node),
@@ -115,7 +115,7 @@ const fromUserData = (raw: Partial<NodeUserData> | undefined) => {
   return { settings, values };
 };
 
-export const decodeRote = (code: string, effects: EffectData[]): RoteGraph | null => {
+export const decodeRote = (code: string, nodes: NodeData[]): RoteGraph | null => {
   const [header, ...body] = code.split('\n');
   if (header !== ROTE_CODE_HEADER) {
     return null;
@@ -138,14 +138,14 @@ export const decodeRote = (code: string, effects: EffectData[]): RoteGraph | nul
   const graph: RoteGraph = { order: [], nodes: {}, wires: [], nextId: 1 };
 
   for (const ref of parsed.nodes) {
-    const effect = effects[ref.type_index - 1];
-    if (!ref.id || !effect) {
+    const node = nodes[ref.type_index - 1];
+    if (!ref.id || !node) {
       return null;
     }
     const id = String(ref.id);
     graph.nodes[id] = {
       id,
-      effect,
+      node,
       x: Number(ref.pos_x) || 0,
       y: Number(ref.pos_y) || 0,
       ...fromUserData(ref.userdata),
@@ -163,8 +163,8 @@ export const decodeRote = (code: string, effects: EffectData[]): RoteGraph | nul
     if (
       !out ||
       !inp ||
-      !findPort(out.effect, 'out', String(conn.out_port)) ||
-      !findPort(inp.effect, 'in', String(conn.in_port))
+      !findPort(out.node, 'out', String(conn.out_port)) ||
+      !findPort(inp.node, 'in', String(conn.in_port))
     ) {
       return null;
     }

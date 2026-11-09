@@ -8,10 +8,10 @@
 	var/nodes_traversed = 0
 	var/debug = FALSE
 
-	// alist<magick_effect, alist<output_port_key, list<list(out_port_key, in_port_key, child)>>>
+	// alist<rote_node, alist<output_port_key, list<list(out_port_key, in_port_key, child)>>>
 	var/alist/effect_graph
 
-	// alist<node_id, /datum/magick_node_data>
+	// alist<node_id, /datum/rote_node_data>
 	// Per-node userdata configured in the rote builder
 	var/alist/node_data
 	// The node currently being executed
@@ -21,12 +21,12 @@
 	VAR_PRIVATE/scope_id = 0
 
 // Per-node userdata configured in the rote builder
-/datum/magick_node_data/
-	// The effect singleton this node uses
-	var/datum/magick_effect/effect
+/datum/rote_node_data/
+	// The node singleton this node uses
+	var/datum/rote_node/node
 	// Target selected for this node (root nodes)
 	var/target
-	// Name given to effect node
+	// Name given to node
 	var/label
 	// What percentage of global success to allocate
 	var/success_percentage
@@ -60,9 +60,9 @@
 /datum/magick_scope/
 	var/id
 	var/datum/magick_scope/parent
-	// alist<magick_effect, alist<port_key, magick_value>>
+	// alist<rote_node, alist<port_key, magick_value>>
 	var/alist/port_values = new()
-	// alist<magick_effect, var>
+	// alist<rote_node, var>
 	// Use this to send per-node data from pre_cast to cast, etc
 	var/alist/blackboard = new()
 
@@ -83,15 +83,15 @@
 		src.type_flags = magick_get_datatype(value)
 	src.value = value
 
-// Returns the effect singleton for a node, defaulting to the node currently being executed
-/datum/magick_context/proc/get_effect(node_id = current_node_id)
-	var/datum/magick_node_data/data = node_data ? node_data[node_id] : null
-	return data?.effect
+// Returns the singleton for a node, defaulting to the node currently being executed
+/datum/magick_context/proc/get_node(node_id = current_node_id)
+	var/datum/rote_node_data/data = node_data ? node_data[node_id] : null
+	return data?.node
 
 // helper function for getting the port definition
 /datum/magick_context/proc/get_port(port)
 	PRIVATE_PROC(TRUE)
-	var/datum/magick_effect/node = get_effect()
+	var/datum/rote_node/node = get_node()
 	if (node == null)
 		return null
 	var/alist/def = node.inputs?[port]
@@ -134,7 +134,7 @@
 			value = ""
 	return value
 
-// assigns a value to a port on an effect node
+// assigns a value to a port on an node
 /datum/magick_context/proc/assign(port, value, type_flags=null)
 	var/alist/def = get_port(port)
 	if (def == null)

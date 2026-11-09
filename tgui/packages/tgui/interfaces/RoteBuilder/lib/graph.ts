@@ -1,9 +1,9 @@
 import { type PortHandle, portSlot } from './ports';
-import type { EffectData, NodeSettings, Position } from './types';
+import type { NodeData, NodeSettings, Position } from './types';
 
 export type RoteNode = {
   id: string;
-  effect: EffectData;
+  node: NodeData;
   x: number;
   y: number;
   settings: NodeSettings;
@@ -36,9 +36,9 @@ export const DEFAULT_SETTINGS: NodeSettings = {
 
 export const EMPTY_GRAPH: RoteGraph = { order: [], nodes: {}, wires: [], nextId: 1 };
 
-export const makePreviewNode = (effect: EffectData): RoteNode => ({
+export const makePreviewNode = (node: NodeData): RoteNode => ({
   id: 'preview',
-  effect,
+  node,
   x: 0,
   y: 0,
   settings: DEFAULT_SETTINGS,
@@ -51,7 +51,7 @@ export const wireBetween = (a: PortHandle, b: PortHandle): Wire => {
 };
 
 export type GraphAction =
-  | { type: 'add'; effect: EffectData; at: Position }
+  | { type: 'add'; node: NodeData; at: Position }
   | { type: 'remove'; id: string }
   | { type: 'move'; id: string; at: Position }
   | { type: 'link'; wire: Wire }
@@ -74,7 +74,7 @@ export const graphReducer = (state: RoteGraph, action: GraphAction): RoteGraph =
       const id = String(state.nextId);
       const node: RoteNode = {
         id,
-        effect: action.effect,
+        node: action.node,
         x: action.at.x,
         y: action.at.y,
         settings: DEFAULT_SETTINGS,
@@ -139,9 +139,9 @@ export const getStats = (graph: RoteGraph): RoteStats => {
   const nodes: Record<string, number> = {};
   let complexity = 0;
   for (const id of graph.order) {
-    const { effect } = graph.nodes[id];
-    complexity += effect.complexity ?? 0;
-    nodes[effect.type] = (nodes[effect.type] ?? 0) + 1;
+    const { node } = graph.nodes[id];
+    complexity += node.complexity ?? 0;
+    nodes[node.type] = (nodes[node.type] ?? 0) + 1;
   }
   return { node_count: graph.order.length, complexity, nodes };
 };
@@ -152,7 +152,7 @@ export const linkedSlots = (wires: Wire[]) => {
   const add = (nodeId: string, slot: string) => {
     let set = map.get(nodeId);
     if (!set) {
-      set = new Set();
+      set = new Set<string>();
       map.set(nodeId, set);
     }
     set.add(slot);

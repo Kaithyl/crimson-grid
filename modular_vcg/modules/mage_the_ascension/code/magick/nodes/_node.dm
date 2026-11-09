@@ -1,28 +1,19 @@
-// This holds the actual code execution for effects
-/datum/magick_effect/
-	abstract_type = /datum/magick_effect/
+// This holds the actual code execution per node
+/datum/rote_node/
+	abstract_type = /datum/rote_node/
 
 	var/name
 	var/desc
 	var/tags
 
-	// Cost to cast effect
-	var/quintessence = 0
-
-	// Minimum successes required for this spell to have an effect
-	var/min_success_cost = 0
-
-	// If the spell's effect can be enhanced by adding multiple successes
-	var/can_add_success = FALSE
-
-	// How much complexity this focus takes up
-	var/complexity = 1
-
 	// Maximum number of this subtype of node allowed in a spell
 	// Mostly to prevent lag for costly effects
 	var/max_nodes
 
-	// Available sphere combinations for this effect
+	// How much complexity this node takes up
+	var/complexity = 0
+
+	// Sphere combinations for this node
 	var/list/spheres
 
 	// Port system for nodes
@@ -33,10 +24,10 @@
 	var/alist/inputs
 	var/alist/outputs
 
-GLOBAL_LIST_INIT_TYPED(magick_effects, /datum/magick_effect, init_subtypes_w_path_keys(/datum/magick_effect, list()))
-GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_data())
+GLOBAL_LIST_INIT_TYPED(rote_nodes, /datum/rote_node, init_subtypes_w_path_keys(/datum/rote_node, list()))
+GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 
-/datum/magick_effect/proc/is_ready(datum/magick_context/context)
+/datum/rote_node/proc/is_ready(datum/magick_context/context)
 	var/alist/input_defs = src.inputs
 	for (var/port_key as anything in input_defs)
 		if (context.get(port_key) == null)
@@ -58,7 +49,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 	return TRUE
 
 // For handling pre and post cast
-/datum/magick_effect/proc/__cast(datum/magick_context/context)
+/datum/rote_node/proc/__cast(datum/magick_context/context)
 	SHOULD_NOT_OVERRIDE(TRUE)
 	// Fizzle spell if someone manages to pass the traversal limit
 	if (++context.nodes_traversed > MAGICK_MAX_TRAVERSAL)
@@ -77,18 +68,20 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 	post_cast(context)
 
 // Must override this for actually doing the effect
-/datum/magick_effect/proc/cast(datum/magick_context/context)
+/datum/rote_node/proc/cast(datum/magick_context/context)
 	PROTECTED_PROC(TRUE)
 	return
 
 // This will be for pre-processing data that will be used in cast
-/datum/magick_effect/proc/pre_cast(datum/magick_context/context)
+/datum/rote_node/proc/pre_cast(datum/magick_context/context)
 	PROTECTED_PROC(TRUE)
 	return
 
 // Only override for custom handling of child nodes.
 // Uses the effect graph dictionary on the context set by the rote.
-/datum/magick_effect/proc/post_cast(datum/magick_context/context, auto_activate = TRUE)
+// auto_traverse is only here to make code reuse easier for iteration/for each nodes
+// TODO: replace auto_traverse when if there is a better architecture
+/datum/rote_node/proc/post_cast(datum/magick_context/context, auto_traverse = TRUE)
 	PROTECTED_PROC(TRUE)
 	var/node_id = context.current_node_id
 	var/alist/edges = context.effect_graph[node_id]
@@ -96,7 +89,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 		return
 
 	// Activate children by default
-	if (auto_activate && edges[out_act] && inputs?[in_act] && outputs?[out_act] && context.get(out_act) == null)
+	if (auto_traverse && edges[out_act] && inputs?[in_act] && outputs?[out_act] && context.get(out_act) == null)
 		var/incoming = context.get_value(in_act)
 		if (incoming != null)
 			context.assign(out_act, incoming, MAGICK_DATATYPE_TRIGGER)
@@ -110,7 +103,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 		for (var/list/tuple as anything in edges[out_port_key])
 			var/in_port_key = tuple[2]
 			var/child_id = tuple[3]
-			var/datum/magick_effect/child = context.get_effect(child_id)
+			var/datum/rote_node/child = context.get_node(child_id)
 			var/alist/child_inputs = child.inputs
 			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
 			if (in_port_def != null && (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
@@ -130,7 +123,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 		for (var/list/tuple as anything in connections)
 			var/in_port_key = tuple[2]
 			var/child_id = tuple[3]
-			var/datum/magick_effect/child = context.get_effect(child_id)
+			var/datum/rote_node/child = context.get_node(child_id)
 
 			var/alist/child_inputs = child.inputs
 			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
@@ -162,7 +155,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 					child.__cast(context)
 			context.current_node_id = node_id
 
-/datum/magick_effect/proc/debug_to_user(datum/magick_context/context)
+/datum/rote_node/proc/debug_to_user(datum/magick_context/context)
 	PRIVATE_PROC(TRUE)
 	to_chat(context.caster, span_info("DEBUG: --- [name] ([type]) ---"))
 	to_chat(context.caster, span_info("DEBUG: Global successes: [context.successes]"))
@@ -182,32 +175,41 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = EMPTY"))
 
 // For UI
-/proc/init_rotebuilder_static_effect_data()
+/proc/init_rotebuilder_static_data()
 	var/list/data = list()
-	var/list/effects_list = list()
+	var/list/nodes_list = list()
 
-	for(var/effect_path in GLOB.magick_effects)
-		var/datum/magick_effect/effect = GLOB.magick_effects[effect_path]
-		if(!istype(effect))
+	for(var/node_path in GLOB.rote_nodes)
+		var/datum/rote_node/node = GLOB.rote_nodes[node_path]
+		if(!node)
 			continue
-		var/list/effect_data = list(
-			"name" = effect.name,
-			"desc" = effect.desc,
-			"type" = "[effect.type]",
-			"tags" = effect.tags,
-			"quintessence" = effect.quintessence,
-			"complexity" = effect.complexity,
-			"max_nodes" = effect.max_nodes,
-			"min_success_cost" = effect.min_success_cost,
-			"spheres" = effect.spheres,
-			"can_add_success" = effect.can_add_success,
+
+		var/list/node_data = list(
+			"name" = node.name,
+			"desc" = node.desc,
+			"type" = "[node.type]",
+			"tags" = node.tags,
+			"complexity" = node.complexity,
+			"max_nodes" = node.max_nodes,
+			"spheres" = node.spheres,
 		)
+
+		// Effect-specific fields, defaulted for non-effect nodes
+		if(istype(node, /datum/rote_node/effect))
+			var/datum/rote_node/effect/effect_node = node
+			node_data["quintessence"] = effect_node.quintessence
+			node_data["min_success_cost"] = effect_node.min_success_cost
+			node_data["can_add_success"] = effect_node.can_add_success
+		else
+			node_data["quintessence"] = 0
+			node_data["min_success_cost"] = 0
+			node_data["can_add_success"] = FALSE
 
 		var/list/inputs_list = list()
 		var/list/outputs_list = list()
 
-		for(var/port_key as anything in effect.inputs)
-			var/alist/def = effect.inputs[port_key]
+		for(var/port_key as anything in node.inputs)
+			var/alist/def = node.inputs[port_key]
 			var/list/port_data = list(
 				"key" = port_key,
 				"name" = def["name"],
@@ -224,8 +226,8 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 				if (def["whitelist"] != null)
 					port_data["whitelist"] = def["whitelist"]
 			UNTYPED_LIST_ADD(inputs_list, port_data)
-		for(var/port_key as anything in effect.outputs)
-			var/alist/def = effect.outputs[port_key]
+		for(var/port_key as anything in node.outputs)
+			var/alist/def = node.outputs[port_key]
 			var/list/port_data = list(
 				"key" = port_key,
 				"name" = def["name"],
@@ -235,10 +237,10 @@ GLOBAL_LIST_INIT(rotebuilder_static_effect_data, init_rotebuilder_static_effect_
 			)
 			UNTYPED_LIST_ADD(outputs_list, port_data)
 
-		effect_data["inputs"] = inputs_list
-		effect_data["outputs"] = outputs_list
+		node_data["inputs"] = inputs_list
+		node_data["outputs"] = outputs_list
 
-		effects_list += list(effect_data)
+		nodes_list += list(node_data)
 
-	data["effects"] = effects_list
+	data["nodes"] = nodes_list
 	return data

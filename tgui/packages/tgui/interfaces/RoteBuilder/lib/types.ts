@@ -2,7 +2,7 @@
 
 export type RoteBuilderData = {
   user_stats: UserStats;
-  effects: EffectData[];
+  nodes: NodeData[];
   view_only?: boolean;
   rote_data?: string;
   rote_name?: string;
@@ -34,7 +34,7 @@ export type PortData = {
   [key: string]: unknown;
 };
 
-export type EffectData = {
+export type NodeData = {
   name: string;
   desc: string;
   type: string;

@@ -20,7 +20,7 @@ import { useWiring } from '../hooks/useWiring';
 import type { PortDir, PortOffsets, Position } from '../types';
 import { isEditableTarget, trackPointer, useLatest } from '../util';
 import { NodeCard } from './NodeCard';
-import { EffectsPlane } from './EffectsPlane';
+import { RotePlane } from './RotePlane';
 
 type Props = {
   canvasRef: RefObject<HTMLDivElement | null>;
@@ -184,7 +184,7 @@ export const RoteCanvas = (props: Props) => {
 
   return (
     <div ref={canvasRef} className="rote-builder__canvas" onMouseDown={() => setSelectedId(null)}>
-      <EffectsPlane
+      <RotePlane
         backgroundImage={resolveAsset('grid_background.png')}
         imageWidth={GRID_TILE}
         onZoomChange={viewport.onZoomChange}
@@ -209,7 +209,7 @@ export const RoteCanvas = (props: Props) => {
             onMeasure={handleMeasure}
           />
         ))}
-      </EffectsPlane>
+      </RotePlane>
     </div>
   );
 };

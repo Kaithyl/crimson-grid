@@ -72,7 +72,7 @@
 	return data
 
 /datum/action/innate/rote_builder/ui_static_data(mob/user)
-	return GLOB.rotebuilder_static_effect_data
+	return GLOB.rotebuilder_static_data
 
 /datum/action/innate/rote_builder/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	if(..())
@@ -139,11 +139,11 @@
 		validation_fail(user, "rote data has no 'nodes'/'connections' lists (raw: [copytext(rote_rawdata, 1, 256)])")
 		return null
 
-	var/list/effects = GLOB.rotebuilder_static_effect_data["effects"]
+	var/list/nodes = GLOB.rotebuilder_static_data["nodes"]
 	var/list/type_counts = list()
 	var/list/known_ids = list()
 	var/list/types_by_id = list()
-	var/list/effect_instances = list()
+	var/list/node_instances = list()
 	var/list/connected_inputs = list()
 	var/list/root_nodes = list()
 	var/alist/effect_graph = new()
@@ -171,39 +171,39 @@
 		known_ids[id] = TRUE
 
 		var/type_index = isnum(node["type_index"]) ? round(node["type_index"]) : text2num("[node["type_index"]]")
-		if(isnull(type_index) || type_index < 1 || type_index > length(effects))
-			validation_fail(user, "node #[node_count] (id '[id]') has out of range type_index '[type_index]' (effects: [length(effects)])")
+		if(isnull(type_index) || type_index < 1 || type_index > length(nodes))
+			validation_fail(user, "node #[node_count] (id '[id]') has out of range type_index '[type_index]' (nodes: [length(nodes)])")
 			return null
 
-		var/list/effect_data = effects[type_index]
-		types_by_id[id] = effect_data
+		var/list/node_def = nodes[type_index]
+		types_by_id[id] = node_def
 
 		// Check if per-type max nodes
-		var/max_nodes = effect_data["max_nodes"]
+		var/max_nodes = node_def["max_nodes"]
 		if(max_nodes)
-			if((type_counts[effect_data["type"]] || 0) >= max_nodes)
-				validation_fail(user, "node #[node_count] (id '[id]') exceeds max_nodes [max_nodes] for effect '[effect_data["name"]]'")
+			if((type_counts[node_def["type"]] || 0) >= max_nodes)
+				validation_fail(user, "node #[node_count] (id '[id]') exceeds max_nodes [max_nodes] for node '[node_def["name"]]'")
 				return null
-			type_counts[effect_data["type"]] = (type_counts[effect_data["type"]] || 0) + 1
+			type_counts[node_def["type"]] = (type_counts[node_def["type"]] || 0) + 1
 
 		// Check sphere requirements
-		var/list/options = effect_data["spheres"]
+		var/list/options = node_def["spheres"]
 		if(options)
 			var/sphere_index = isnum(node["sphere_index"]) ? round(node["sphere_index"]) : text2num("[node["sphere_index"]]")
 			if(isnull(sphere_index) || sphere_index < 1 || sphere_index > length(options) || !validate_spheres(user, options[sphere_index]))
-				validation_fail(user, "node #[node_count] (id '[id]', effect '[effect_data["name"]]') failed sphere requirements (sphere_index '[sphere_index]', options: [json_encode(options)])")
+				validation_fail(user, "node #[node_count] (id '[id]', node '[node_def["name"]]') failed sphere requirements (sphere_index '[sphere_index]', options: [json_encode(options)])")
 				return null
 
-		// Resolve the effect singleton
-		var/effect_type = text2path(effect_data["type"])
-		var/datum/magick_effect/effect = GLOB.magick_effects[effect_type]
-		if(!effect)
-			validation_fail(user, "node #[node_count] (id '[id]') has unknown effect type '[effect_data["type"]]'")
+		// Resolve the node singleton
+		var/node_type = text2path(node_def["type"])
+		var/datum/rote_node/node_singleton = GLOB.rote_nodes[node_type]
+		if(!node_singleton)
+			validation_fail(user, "node #[node_count] (id '[id]') has unknown node type '[node_def["type"]]'")
 			return null
 
 		// Build per-node data
-		var/datum/magick_node_data/node_data_entry = new()
-		node_data_entry.effect = effect
+		var/datum/rote_node_data/node_data_entry = new()
+		node_data_entry.node = node_singleton
 		if(node["port_values"])
 			node_data_entry.port_values = node["port_values"]
 		if(node["userdata"])
@@ -214,15 +214,15 @@
 			node_data_entry.max_success = userdata["max_success"]
 		node_data[id] = node_data_entry
 
-		effect_instances[id] = effect
+		node_instances[id] = node_singleton
 
-		if(effect_data["tags"] & MAGICK_TAG_ROOT)
+		if(node_def["tags"] & MAGICK_TAG_ROOT)
 			root_count++
 			root_nodes += id
 
-		complexity_sum += effect_data["complexity"]
-		expected_success_cost += effect_data["min_success_cost"]
-		expected_quint_cost += effect_data["quintessence"]
+		complexity_sum += node_def["complexity"]
+		expected_success_cost += node_def["min_success_cost"]
+		expected_quint_cost += node_def["quintessence"]
 
 	if(!root_count)
 		validation_fail(user, "rote has no root nodes")
@@ -242,8 +242,8 @@
 			validation_fail(user, "connection out_id '[out_id]' -> in_id '[in_id]' (out_port '[out_key]', in_port '[in_key]') references unknown nodes or empty ports")
 			return null
 
-		var/datum/magick_effect/source = effect_instances[out_id]
-		var/datum/magick_effect/target = effect_instances[in_id]
+		var/datum/rote_node/source = node_instances[out_id]
+		var/datum/rote_node/target = node_instances[in_id]
 
 		var/alist/source_outputs = source.outputs
 		var/alist/target_inputs = target.inputs
@@ -273,8 +273,8 @@
 		if(connected_inputs[id])
 			continue
 
-		var/list/effect_data = types_by_id[id]
-		var/list/inputs = effect_data["inputs"]
+		var/list/node_def = types_by_id[id]
+		var/list/inputs = node_def["inputs"]
 		var/has_required_input = FALSE
 		for(var/list/input_data in inputs)
 			if(input_data["default_value"] == null)
@@ -282,7 +282,7 @@
 				break
 
 		if(has_required_input)
-			validation_fail(user, "node '[id]' ('[effect_data["name"]]') is unreachable but has required inputs")
+			validation_fail(user, "node '[id]' ('[node_def["name"]]') is unreachable but has required inputs")
 			return null
 
 	return alist(

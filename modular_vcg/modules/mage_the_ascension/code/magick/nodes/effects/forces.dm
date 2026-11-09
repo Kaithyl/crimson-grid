@@ -6,7 +6,7 @@
 
 // Fireball
 
-/datum/magick_effect/fireball
+/datum/rote_node/effect/fireball
 	name = "Fireball"
 	tags = MAGICK_TAG_DAMAGE
 	min_success_cost = 2
@@ -31,7 +31,7 @@
 		out_act = MAGICK_PORT_ACTIVATE
 	)
 
-/datum/magick_effect/fireball/cast(datum/magick_context/context)
+/datum/rote_node/effect/fireball/cast(datum/magick_context/context)
 
 	// Temporary - TODO: Add getting + consuming successes handling to base _effect.dm
 	var/successes = context.get_value(in_act)
@@ -76,7 +76,7 @@
 
 // Lightning Bolt
 
-/datum/magick_effect/lightningbolt
+/datum/rote_node/effect/lightningbolt
 	name = "Lightning Bolt"
 	tags = MAGICK_TAG_DAMAGE
 	min_success_cost = 2
@@ -101,7 +101,7 @@
 		out_act = MAGICK_PORT_ACTIVATE
 	)
 
-/datum/magick_effect/lightningbolt/cast(datum/magick_context/context)
+/datum/rote_node/effect/lightningbolt/cast(datum/magick_context/context)
 	var/successes = context.get_value(in_act)
 	if (!successes || successes < min_success_cost)
 		return

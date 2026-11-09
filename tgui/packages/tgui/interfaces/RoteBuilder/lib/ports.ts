@@ -5,7 +5,7 @@ import {
   FLAG_STRING,
   FLAG_TRIGGER,
 } from './constants';
-import type { EffectData, PortData, PortDir } from './types';
+import type { NodeData, PortData, PortDir } from './types';
 
 // Any changes to this function should be reflected in
 // code\__DEFINES\~~crimson_defines\rote_builder\datatypes.dm\#define MAGICK_DATATYPES_VALID
@@ -31,11 +31,11 @@ export const isNumberPort = (port: PortData) => (port.type & FLAG_NUMBER) !== 0;
 export const isStringPort = (port: PortData) => (port.type & FLAG_STRING) !== 0;
 export const hasWhitelist = (port: PortData) => !!port.whitelist?.length;
 
-export const portsOf = (effect: EffectData, dir: PortDir): PortData[] =>
-  (dir === 'in' ? effect.inputs : effect.outputs) ?? [];
+export const portsOf = (node: NodeData, dir: PortDir): PortData[] =>
+  (dir === 'in' ? node.inputs : node.outputs) ?? [];
 
-export const findPort = (effect: EffectData, dir: PortDir, key: string) =>
-  portsOf(effect, dir).find((port) => port.key === key);
+export const findPort = (node: NodeData, dir: PortDir, key: string) =>
+  portsOf(node, dir).find((port) => port.key === key);
 
 // Identifies one port on one node
 export type PortHandle = { nodeId: string; dir: PortDir; port: PortData };

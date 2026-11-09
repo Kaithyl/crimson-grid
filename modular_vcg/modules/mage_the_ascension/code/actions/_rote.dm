@@ -61,8 +61,8 @@
 	// Determine which root nodes need target selection
 	var/list/needs_selection = list()
 	for (var/node_id as anything in root_nodes)
-		var/datum/magick_node_data/node_data_entry = node_data ? node_data[node_id] : null
-		var/datum/magick_effect/root/node = node_data_entry?.effect
+		var/datum/rote_node_data/node_data_entry = node_data ? node_data[node_id] : null
+		var/datum/rote_node/root/node = node_data_entry?.node
 		if (node?.needs_crosshair)
 			needs_selection += node_id
 
@@ -70,7 +70,7 @@
 		// Enter ranged targeting mode with crosshair cursor
 		pending_target_nodes = needs_selection
 		var/first_id = needs_selection[1]
-		var/datum/magick_node_data/first_data = node_data ? node_data[first_id] : null
+		var/datum/rote_node_data/first_data = node_data ? node_data[first_id] : null
 		enable_text = span_notice(MAGICK_TARGET_ENABLE_TEXT(first_data?.label, length(pending_target_nodes)))
 		set_ranged_ability(user, enable_text)
 		build_all_button_icons(UPDATE_BUTTON_STATUS)
@@ -89,8 +89,8 @@
 		return FALSE
 
 	var/node_id = pending_target_nodes[1]
-	var/datum/magick_node_data/node_data_entry = node_data ? node_data[node_id] : null
-	var/datum/magick_effect/root/node = node_data_entry?.effect
+	var/datum/rote_node_data/node_data_entry = node_data ? node_data[node_id] : null
+	var/datum/rote_node/root/node = node_data_entry?.node
 	if (!node)
 		pending_target_nodes -= node_id
 		return TRUE
@@ -134,8 +134,8 @@
 
 	// Auto-assign self-selecting root nodes
 	for (var/node_id as anything in root_nodes)
-		var/datum/magick_node_data/node_data_entry = node_data ? node_data[node_id] : null
-		var/datum/magick_effect/root/node = node_data_entry?.effect
+		var/datum/rote_node_data/node_data_entry = node_data ? node_data[node_id] : null
+		var/datum/rote_node/root/node = node_data_entry?.node
 		if (!node)
 			continue
 		var/target = node.resolve_target(clicker)
@@ -212,6 +212,8 @@
 	context.effect_graph = effect_graph
 	context.node_data = node_data
 
+	context.debug = TRUE
+
 	var/list/visited = list()
 	for (var/node_id as anything in root_nodes)
 		prefill_node_ports(node_id, context, visited)
@@ -219,7 +221,7 @@
 	// Cast each root node with its assigned target
 	for (var/node_id as anything in root_nodes)
 		context.current_node_id = node_id
-		var/datum/magick_effect/root/node = context.get_effect(node_id)
+		var/datum/rote_node/root/node = context.get_node(node_id)
 		node.__cast(context)
 
 /datum/action/innate/rote/proc/prefill_node_ports(node_id, datum/magick_context/context, list/visited)
@@ -228,14 +230,14 @@
 		return
 	visited += node_id
 
-	var/datum/magick_node_data/node_data_entry = context.node_data ? context.node_data[node_id] : null
-	var/datum/magick_effect/effect = node_data_entry?.effect
-	if (!effect)
+	var/datum/rote_node_data/node_data_entry = context.node_data ? context.node_data[node_id] : null
+	var/datum/rote_node/effect/effect_node = node_data_entry?.node
+	if (!effect_node)
 		return
 
 	context.current_node_id = node_id
 	if (node_data_entry.port_values)
-		var/alist/input_defs = effect.inputs
+		var/alist/input_defs = effect_node.inputs
 		for (var/port_key as anything in input_defs)
 			var/value = node_data_entry.port_values["port_[port_key]"]
 			if (value != null && context.get(port_key) == null)

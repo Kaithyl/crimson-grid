@@ -1,8 +1,11 @@
+// TODO: Make action stacking, so mage can perform verbal and somatic actions at the same time
+
 /datum/magick_focus/
 	abstract_type = /datum/magick_focus/
 
 	var/name
 	var/desc
+	//var/action_type
 
 	// Valid paradigms associated with this tool
 	var/paradigms
@@ -33,22 +36,8 @@
 
 GLOBAL_LIST_INIT_TYPED(magick_foci, /datum/magick_focus, init_subtypes_w_path_keys(/datum/magick_focus, list()))
 
-/datum/magick_focus/proc/cast(mob/user)
+/datum/magick_focus/proc/can_use(mob/user)
 	return TRUE
-
-/datum/magick_focus/item/
-	abstract_type = /datum/magick_focus/item/
-
-	var/item_type
-
-	// Items that can be used as substitute at +1 diff
-	var/list/substitute_types
-
-/datum/magick_focus/item/cast(mob/user)
-	for (var/obj/item/I in user.held_items)
-		if (istype(I, type))
-			return TRUE
-	return FALSE
 
 /datum/preference_middleware/foci
 	key = "instruments"

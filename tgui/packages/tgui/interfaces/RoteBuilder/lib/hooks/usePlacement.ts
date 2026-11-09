@@ -9,17 +9,17 @@ import {
 } from 'react';
 
 import { MOUSE_BUTTON_LEFT, PLACEMENT_GRAB } from '../constants';
-import type { EffectData, Position } from '../types';
+import type { NodeData, Position } from '../types';
 import { trackPointer, useLatest } from '../util';
 
 type Args = {
   canvasRef: RefObject<HTMLDivElement | null>;
   toPlane: (clientX: number, clientY: number) => Position | null;
   disabled: boolean;
-  onPlace: (effect: EffectData, at: Position) => void;
+  onPlace: (node: NodeData, at: Position) => void;
 };
 
-export type Ghost = { effect: EffectData; x: number; y: number };
+export type Ghost = { node: NodeData; x: number; y: number };
 
 const grabPoint = (e: { clientX: number; clientY: number }) => ({
   x: e.clientX - PLACEMENT_GRAB.x,
@@ -34,16 +34,16 @@ export const usePlacement = ({ canvasRef, toPlane, disabled, onPlace }: Args) =>
   useEffect(() => () => stopRef.current?.(), []);
 
   const pickUp = useCallback(
-    (effect: EffectData, e: ReactMouseEvent) => {
+    (node: NodeData, e: ReactMouseEvent) => {
       if (e.button !== MOUSE_BUTTON_LEFT || disabled) {
         return;
       }
       e.preventDefault(); // no text selection while dragging
-      setGhost({ effect, ...grabPoint(e) });
+      setGhost({ node, ...grabPoint(e) });
 
       stopRef.current?.();
       stopRef.current = trackPointer(
-        (ev) => setGhost({ effect, ...grabPoint(ev) }),
+        (ev) => setGhost({ node, ...grabPoint(ev) }),
         (ev) => {
           stopRef.current = null;
           setGhost(null);
@@ -56,7 +56,7 @@ export const usePlacement = ({ canvasRef, toPlane, disabled, onPlace }: Args) =>
           const { x, y } = grabPoint(ev);
           const at = toPlane(x, y);
           if (at) {
-            onPlaceRef.current(effect, at);
+            onPlaceRef.current(node, at);
           }
         },
       );
