@@ -64,6 +64,10 @@ function InstrumentIcon(props: {
   );
 }
 
+// Putting this here temporarily until everything here is moved to CSS
+const DISCARDED_OUTLINE = '2px solid #d4af37';
+const DISCARDED_GLOW = '0 0 6px rgba(212, 175, 55, 0.7)';
+
 export function FociPage() {
   const serverData = useServerPrefs();
   const { act, data } = useBackend<FociData>();
@@ -193,9 +197,12 @@ export function FociPage() {
                   }}
                   style={{
                     cursor: 'pointer',
-                    border: isSelected
-                      ? '1px solid white'
-                      : '1px solid rgba(255,255,255,0.1)',
+                    border: isDiscarded
+                      ? DISCARDED_OUTLINE
+                      : isSelected
+                        ? '1px solid white'
+                        : '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: isDiscarded ? DISCARDED_GLOW : undefined,
                     borderRadius: '2px',
                     width: '120px',
                     height: '120px',
@@ -211,11 +218,7 @@ export function FociPage() {
                 >
                   {assignedInfo ? (
                     <Tooltip content={assignedInfo.name}>
-                      <InstrumentIcon
-                        info={assignedInfo}
-                        size="96px"
-                        dimmed={isDiscarded}
-                      />
+                      <InstrumentIcon info={assignedInfo} size="96px" />
                     </Tooltip>
                   ) : (
                     <Box color="label" textAlign="center">
@@ -286,9 +289,12 @@ export function FociPage() {
                   }}
                   style={{
                     cursor: canSocket ? 'pointer' : 'not-allowed',
-                    border: isAssignedToSelected
-                      ? '1px solid white'
-                      : '1px solid rgba(255,255,255,0.1)',
+                    border: isDiscarded
+                      ? DISCARDED_OUTLINE
+                      : isAssignedToSelected
+                        ? '1px solid white'
+                        : '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: isDiscarded ? DISCARDED_GLOW : undefined,
                     borderRadius: '2px',
                     width: '100px',
                     height: '100px',
@@ -302,7 +308,7 @@ export function FociPage() {
                     background: isAssignedToSelected
                       ? 'rgba(255,255,255,0.08)'
                       : 'rgba(0,0,0,0.2)',
-                    opacity: !inParadigm ? 0.35 : isDiscarded ? 0.5 : 1,
+                    opacity: !inParadigm ? 0.35 : 1,
                   }}
                 >
                   <InstrumentIcon info={info} dimmed={!inParadigm} size="56px" />

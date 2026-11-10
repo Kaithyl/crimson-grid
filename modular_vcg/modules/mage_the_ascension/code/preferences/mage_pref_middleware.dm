@@ -144,7 +144,9 @@
 	stat.decrease_score(1)
 
 	// If arete was decreased, bump down spheres that exceed the new arete
+	// and instruments if they exceed discarded points
 	if (istype(stat, /datum/st_stat/arete))
+		fix_discarded_instruments()
 		var/new_arete = stat.get_pure_score()
 		var/datum/st_stat/sphere/sphere_category = preferences.preference_storyteller_stats[/datum/st_stat/sphere]
 		for (var/sphere_type in subtypesof(/datum/st_stat/sphere))
@@ -180,6 +182,23 @@
 	refund_all_mage_stats()
 	apply_mage_willpower(user)
 	return TRUE
+
+/datum/preference_middleware/mage_stats/proc/fix_discarded_instruments()
+	var/datum/preference_middleware/foci/foci_middleware
+	for(var/datum/preference_middleware/preference_middleware as anything in preferences.middleware)
+		if(istype(preference_middleware, /datum/preference_middleware/foci))
+			foci_middleware = preference_middleware
+			break
+	if(!foci_middleware)
+		return
+	var/available = foci_middleware.get_discard_points()
+	var/list/discarded = preferences.discarded_instruments
+	if(!length(discarded) || length(discarded) <= available)
+		return
+	// Drop the most recently discarded instruments until we are within budget.
+	while(length(discarded) > available)
+		discarded.Cut(length(discarded))
+	preferences.save_character()
 
 /datum/preference_middleware/mage_stats/proc/refund_all_mage_stats()
 	var/datum/st_stat/freebie/freebie_stat = preferences.preference_storyteller_stats[STAT_FREEBIE_POINTS]

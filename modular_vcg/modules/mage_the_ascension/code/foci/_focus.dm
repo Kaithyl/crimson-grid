@@ -153,3 +153,11 @@ GLOBAL_LIST_INIT_TYPED(magick_foci, /datum/magick_focus, init_subtypes_w_path_ke
 	preferences.discarded_instruments = list()
 	preferences.save_character()
 	return TRUE
+
+/datum/preference_middleware/foci/post_set_preference(mob/user, preference, value)
+	. = ..()
+	if(preference != "mage_faction")
+		return
+	preferences.focus_instruments = list()
+	preferences.discarded_instruments = list()
+	preferences.save_character()
