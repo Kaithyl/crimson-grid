@@ -1,9 +1,15 @@
 import {
   FLAG_ATOM,
+  FLAG_LIST,
+  FLAG_MOB,
   FLAG_NUMBER,
+  FLAG_OBJ,
   FLAG_ORIGIN,
   FLAG_STRING,
+  FLAG_STRING_OR_NUMBER,
   FLAG_TRIGGER,
+  FLAG_TURF,
+  PRIMARY_ACTIVATE_KEYS,
 } from './constants';
 import type { NodeData, PortData, PortDir } from './types';
 
@@ -25,11 +31,44 @@ export const validLink = (output: PortData, input: PortData): boolean => {
   const originCheck = (input.type & FLAG_ORIGIN) === 0 || (output.type & FLAG_ORIGIN) !== 0;
   return atomCheck && isSubset && originCheck;
 };
-
 export const isTriggerPort = (port: PortData) => (port.type & FLAG_TRIGGER) !== 0;
+
+export const isPrimaryActivatePort = (port: PortData) => PRIMARY_ACTIVATE_KEYS.includes(port.key);
 export const isNumberPort = (port: PortData) => (port.type & FLAG_NUMBER) !== 0;
 export const isStringPort = (port: PortData) => (port.type & FLAG_STRING) !== 0;
 export const hasWhitelist = (port: PortData) => !!port.whitelist?.length;
+
+export const portTypeLabel = (port: PortData): string => {
+  const { type } = port;
+  if (type & FLAG_TRIGGER) {
+    return 'signal';
+  }
+  const parts: string[] = [];
+  if (type & FLAG_LIST) {
+    parts.push('list');
+  }
+  if ((type & FLAG_STRING_OR_NUMBER) === FLAG_STRING_OR_NUMBER) {
+    parts.push('value');
+  } else if (type & FLAG_NUMBER) {
+    parts.push('number');
+  } else if (type & FLAG_STRING) {
+    parts.push('string');
+  }
+  if ((type & FLAG_ATOM) === FLAG_ATOM) {
+    parts.push('atom');
+  } else if (type & FLAG_TURF) {
+    parts.push('turf');
+  } else if (type & FLAG_OBJ) {
+    parts.push('obj');
+  } else if (type & FLAG_MOB) {
+    parts.push('mob');
+  }
+  if (type & FLAG_ORIGIN) {
+    parts.push('origin');
+  }
+
+  return parts.length ? parts.join(' | ') : 'any';
+};
 
 export const portsOf = (node: NodeData, dir: PortDir): PortData[] =>
   (dir === 'in' ? node.inputs : node.outputs) ?? [];

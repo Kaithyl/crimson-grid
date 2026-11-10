@@ -45,13 +45,11 @@ $color-port-invalid: #555;
   inset: 0;
   overflow: hidden;
 
-  // Keep wires visible past the bounds of InfinitePlane's inner container
   svg {
     overflow: visible;
   }
 }
 
-// 0x0 marker at the plane's (0, 0). useViewport reads its screen rect.
 .rote-builder__origin {
   position: absolute;
   left: 0;
@@ -130,8 +128,6 @@ $color-port-invalid: #555;
   box-shadow: 0 0 0 2px rgba(176, 109, 232, 0.18);
 }
 
-// Ghost that follows the cursor while placing from the effects menu.
-// Uses client coordinates, so it has to be fixed rather than absolute.
 .rote-node--preview {
   position: fixed;
   z-index: 50;
@@ -276,26 +272,47 @@ $color-port-invalid: #555;
   text-align: right;
 }
 
-// Deliberately not positioned, so .rote-port__tooltip stays anchored to the node like before
 .rote-node__port-label {
   display: flex;
   align-items: center;
   gap: $port-label-gap;
 
-  height: $socket;
-  line-height: $socket;
+  min-height: $socket;
   min-width: 0;
 
   font-size: 11px;
   color: #bbb;
   white-space: nowrap;
+}
 
-  > span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+.rote-node__port-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.rote-node__port-name-row {
+  display: flex;
+  align-items: center;
+  gap: $port-label-gap;
+  min-width: 0;
+}
+
+.rote-node__port-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rote-node__port-type {
+  font-size: 9px;
+  color: #888;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rote-node__port-col--in .rote-node__port-label {
@@ -304,6 +321,11 @@ $color-port-invalid: #555;
 
 .rote-node__port-col--out .rote-node__port-label {
   justify-content: flex-end;
+}
+
+.rote-node__port-col--out .rote-node__port-text {
+  align-items: flex-end;
+  text-align: right;
 }
 
 // Sockets
@@ -347,9 +369,6 @@ $color-port-invalid: #555;
 
 /* Trigger ports */
 .rote-port__socket.rote-port--activate {
-  position: absolute;
-  top: ($title-h - $socket) * 0.5 + $node-pad-y;
-
   width: $socket;
   height: $socket;
   margin: 0;
@@ -357,6 +376,15 @@ $color-port-invalid: #555;
   border: 0;
   border-radius: 0;
   clip-path: polygon(0 0, 100% 50%, 0 100%);
+
+  &:hover {
+    background: #fff;
+  }
+}
+
+.rote-port__socket.rote-port--activate:not(.rote-port--activate-inline) {
+  position: absolute;
+  top: ($title-h - $socket) * 0.5 + $node-pad-y;
 
   &.rote-port__socket--in {
     left: -($socket * 0.5 + $node-border * 0.5);
@@ -367,9 +395,18 @@ $color-port-invalid: #555;
     left: auto;
     right: -($socket * 0.5 + $node-border * 0.5);
   }
+}
 
-  &:hover {
-    background: #fff;
+.rote-port__socket.rote-port--activate-inline {
+  &.rote-port__socket--in {
+    margin-right: -($socket + $port-label-gap);
+    left: -$socket-edge;
+  }
+
+  &.rote-port__socket--out {
+    order: 1;
+    margin-left: -($socket + $port-label-gap);
+    left: $socket-edge;
   }
 }
 
@@ -384,8 +421,6 @@ $color-port-invalid: #555;
   cursor: not-allowed;
 }
 
-// Trigger sockets aren't inside a label, so they get dimmed on their own.
-// Data sockets are already dimmed by their label, so they don't need it twice.
 .rote-port--activate.rote-port--invalid,
 .rote-node__port-label.rote-port--invalid {
   opacity: 0.35;
@@ -424,7 +459,6 @@ $color-port-invalid: #555;
     border-color: #c94a5a;
   }
 
-  // Disabled while a wire feeds the port, and in view-only mode
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;

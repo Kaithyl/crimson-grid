@@ -10,7 +10,7 @@
 
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
-		out_target = alist("name" = "Target (Origin)", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
+		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
 /datum/rote_node/root/cast(datum/magick_context/context)
@@ -59,7 +59,7 @@
 	melee_target_type = /turf
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
-		out_target = alist("name" = "Target (Origin)", "type" = MAGICK_DATATYPE_TURF | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
+		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_TURF | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
 /datum/rote_node/root/target_melee/_mob
@@ -67,7 +67,7 @@
 	melee_target_type = /mob/living
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
-		out_target = alist("name" = "Target (Origin)", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
+		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
 /datum/rote_node/root/target_melee/_obj
@@ -75,7 +75,7 @@
 	melee_target_type = /obj
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
-		out_target = alist("name" = "Target (Origin)", "type" = MAGICK_DATATYPE_OBJ | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
+		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_OBJ | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
 // Target (Clicked)

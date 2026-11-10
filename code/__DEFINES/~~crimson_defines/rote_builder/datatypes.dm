@@ -1,3 +1,6 @@
+// Any changes should be updated in RoteBuilder\lib\constants.ts
+
+#define MAGICK_DATATYPE_ANY						0
 #define MAGICK_DATATYPE_TRIGGER					(1<<0)
 #define MAGICK_DATATYPE_NUMBER  				(1<<1)
 #define MAGICK_DATATYPE_STRING  				(1<<2)

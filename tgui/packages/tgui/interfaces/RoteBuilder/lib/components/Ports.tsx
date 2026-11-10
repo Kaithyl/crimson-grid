@@ -3,7 +3,12 @@
 import { classes } from 'tgui-core/react';
 
 import type { PortMouseHandler } from '../hooks/useWiring';
-import { isTriggerPort, type PortHandle } from '../ports';
+import {
+  isPrimaryActivatePort,
+  isTriggerPort,
+  type PortHandle,
+  portTypeLabel,
+} from '../ports';
 import { hasValueEditor, PortValueInput } from './PortValueInput';
 
 type Props = {
@@ -24,8 +29,8 @@ export const Port = (props: Props) => {
   const { onMouseDown, onMouseUp, onContextMenu, onSetValue } = props;
   const { dir, port } = handle;
   const trigger = isTriggerPort(port);
+  const primaryActivate = isPrimaryActivatePort(port);
 
-  // `data-port` is how NodeCard finds this socket when measuring wire endpoints
   const socket = (
     <span
       data-port={slot}
@@ -33,6 +38,7 @@ export const Port = (props: Props) => {
         'rote-port__socket',
         `rote-port__socket--${dir}`,
         trigger && 'rote-port--activate',
+        trigger && !primaryActivate && 'rote-port--activate-inline',
         invalid && 'rote-port--invalid',
       ])}
       title={trigger ? port.name : undefined}
@@ -42,11 +48,12 @@ export const Port = (props: Props) => {
     />
   );
 
-  if (trigger) {
+  if (primaryActivate) {
     return socket;
   }
 
-  // For data ports, the whole row accepts a dropped wire, which is easier to hit than the socket alone
+  // For data and inline trigger ports, the whole row accepts a dropped wire,
+  // which is easier to hit than the socket alone
   return (
     <div
       className={classes(['rote-node__port-label', invalid && 'rote-port--invalid'])}
@@ -54,15 +61,20 @@ export const Port = (props: Props) => {
       onMouseUp={(e) => onMouseUp?.(handle, e)}
     >
       {socket}
-      <span>{port.name}</span>
-      {dir === 'in' && hasValueEditor(port) && (
-        <PortValueInput
-          port={port}
-          value={value}
-          disabled={readOnly || linked}
-          onCommit={(next) => onSetValue?.(handle.nodeId, port.key, next)}
-        />
-      )}
+      <div className="rote-node__port-text">
+        <div className="rote-node__port-name-row">
+          <span className="rote-node__port-name">{port.name}</span>
+          {dir === 'in' && !trigger && hasValueEditor(port) && (
+            <PortValueInput
+              port={port}
+              value={value}
+              disabled={readOnly || linked}
+              onCommit={(next) => onSetValue?.(handle.nodeId, port.key, next)}
+            />
+          )}
+        </div>
+        <div className="rote-node__port-type">{portTypeLabel(port)}</div>
+      </div>
       {!!port.desc && <div className="rote-port__tooltip">{port.desc}</div>}
     </div>
   );

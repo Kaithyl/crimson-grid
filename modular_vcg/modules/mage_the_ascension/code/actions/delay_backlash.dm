@@ -5,8 +5,10 @@
 	// When stance is on, if a backlash would occur, spend 1 point of temp wp to delay by 1 scene
 	desc = ""
 
-	button_icon = 'icons/mob/actions/actions_spells.dmi'
-	button_icon_state = "spacetime"
+	//button_icon = 'icons/mob/actions/actions_spells.dmi'
+	//button_icon_state = "spacetime"
+	button_icon = 'modular_darkpack/modules/deprecated/icons/torpor.dmi'
+	button_icon_state = "awakealt"
 
 	check_flags = AB_CHECK_CONSCIOUS
 

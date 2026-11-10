@@ -2,11 +2,10 @@
 	abstract_type = /datum/magick_focus/verbal
 
 	// Placeholders until I can find a good mouth sprite
-	//icon = 'icons/obj/medical/organs/organs.dmi'
-	//icon_state = "tongue"
-
-	icon = 'icons/mob/effects/talk.dmi'
-	icon_state = "default0"
+	icon = 'icons/obj/medical/organs/organs.dmi'
+	icon_state = "tongue"
+	//icon = 'icons/mob/effects/talk.dmi'
+	//icon_state = "default0"
 
 	var/required_language
 

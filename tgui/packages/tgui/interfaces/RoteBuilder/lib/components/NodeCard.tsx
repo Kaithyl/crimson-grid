@@ -12,7 +12,14 @@ import { classes } from 'tgui-core/react';
 
 import type { RoteNode } from '../graph';
 import type { PortMouseHandler } from '../hooks/useWiring';
-import { canLink, isTriggerPort, type PortHandle, portSlot, portsOf, samePort } from '../ports';
+import {
+  canLink,
+  isPrimaryActivatePort,
+  type PortHandle,
+  portSlot,
+  portsOf,
+  samePort,
+} from '../ports';
 import type { PortData, PortDir, PortOffsets } from '../types';
 import { offsetWithin } from '../util';
 import { Port } from './Ports';
@@ -130,8 +137,8 @@ export const NodeCard = memo((props: Props) => {
       style={preview ? style : { left: node.x, top: node.y }}
       onMouseDown={preview ? undefined : (e) => onNodeMouseDown?.(id, e)}
     >
-      {inputs.filter(isTriggerPort).map((port) => renderPort('in', port))}
-      {outputs.filter(isTriggerPort).map((port) => renderPort('out', port))}
+      {inputs.filter(isPrimaryActivatePort).map((port) => renderPort('in', port))}
+      {outputs.filter(isPrimaryActivatePort).map((port) => renderPort('out', port))}
 
       <div className="rote-node__body">
         <div className="rote-node__header">
@@ -163,10 +170,10 @@ export const NodeCard = memo((props: Props) => {
 
         <div className="rote-node__ports">
           <div className="rote-node__port-col rote-node__port-col--in">
-            {inputs.filter((port) => !isTriggerPort(port)).map((port) => renderPort('in', port))}
+            {inputs.filter((port) => !isPrimaryActivatePort(port)).map((port) => renderPort('in', port))}
           </div>
           <div className="rote-node__port-col rote-node__port-col--out">
-            {outputs.filter((port) => !isTriggerPort(port)).map((port) => renderPort('out', port))}
+            {outputs.filter((port) => !isPrimaryActivatePort(port)).map((port) => renderPort('out', port))}
           </div>
         </div>
 

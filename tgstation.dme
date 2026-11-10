@@ -8438,6 +8438,7 @@
 #include "modular_vcg\modules\mage_the_ascension\code\magick\nodes\effects\_effect.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\nodes\effects\correspondence.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\nodes\effects\forces.dm"
+#include "modular_vcg\modules\mage_the_ascension\code\magick\nodes\effects\iterators.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\magick\nodes\effects\utility.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\foci\_focus.dm"
 #include "modular_vcg\modules\mage_the_ascension\code\foci\verbal.dm"
