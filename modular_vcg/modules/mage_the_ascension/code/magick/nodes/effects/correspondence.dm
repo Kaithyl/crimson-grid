@@ -8,6 +8,7 @@
 	name = "Ranged Effect"
 	desc = "Convert a target into an origin for an effect."
 	tags = MAGICK_TAG_UTILITY
+	complexity = 2
 	min_success_cost = 1
 	spheres = list(
 		alist(
@@ -18,11 +19,11 @@
 	var/in_target = "in_target"
 	var/out_origin = "out_origin"
 
-	inputs = alist(
+	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
 		in_target = MAGICK_PORT_TARGET,
 	)
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_origin = alist("name" = "Origin", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -40,6 +41,7 @@
 	name = "Teleport (Self)"
 	desc = "Teleport the caster to the target's location."
 	tags = MAGICK_TAG_UTILITY
+	complexity = 2
 	min_success_cost = 1
 	spheres = list(
 		alist(
@@ -49,11 +51,11 @@
 
 	var/in_target = "in_target"
 
-	inputs = alist(
+	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
 		in_target = MAGICK_PORT_TARGET,
 	)
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 	)
 

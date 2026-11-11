@@ -2,7 +2,7 @@
 // Adapted from IntegratedCircuit/FundamentalTypes.jsx + BasicInput.jsx
 import { type KeyboardEvent, type SyntheticEvent, useEffect, useState } from 'react';
 
-import { hasWhitelist, isNumberPort, isStringPort, isTriggerPort } from '../ports';
+import { hasWhitelist, isListPort, isNumberPort, isStringPort, isTriggerPort } from '../ports';
 import type { PortData } from '../types';
 
 type Props = {
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export const hasValueEditor = (port: PortData) =>
-  !isTriggerPort(port) && (isNumberPort(port) || isStringPort(port));
+  !isTriggerPort(port) && !isListPort(port) && (isNumberPort(port) || isStringPort(port));
 
 // Keep clicks in the field from dragging the node or panning the plane
 const stopPropagation = (e: SyntheticEvent) => e.stopPropagation();
@@ -36,7 +36,8 @@ export const PortValueInput = ({ port, value, disabled, onCommit }: Props) => {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
 
-  if (isNumberPort(port)) {
+  // String ports take priority
+  if (isNumberPort(port) && !isStringPort(port)) {
     const commit = () => {
       if (draft.trim() === '') {
         setDraft(value);

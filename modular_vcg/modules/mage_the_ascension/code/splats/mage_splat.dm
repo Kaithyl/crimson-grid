@@ -21,6 +21,10 @@
 	// Quint and WP expenditure for casting is in spell crafting instead of being a stance
 	var/datum/action/innate/rote_builder/rote_builder_action
 
+	var/list/datum/magick_rote/rotes
+	// rote currently being cast
+	var/datum/magick_rote/active_rote
+
 	splat_priority = SPLAT_PRIO_MAGE
 
 	//splat_traits = list(TRAIT_AWAKENED)
@@ -28,6 +32,14 @@
 	// TODO: Allow embrace but lose mage splat. Add willpower option to die instead of getting embraced.
 	incompatible_splats = list(/datum/splat/werewolf/shifter, /datum/splat/vampire/kindred)
 	can_frenzy = FALSE
+
+/datum/splat/mage/proc/set_active_rote(datum/magick_rote/rote)
+	if (active_rote == rote)
+		return
+	var/datum/magick_rote/old_rote = active_rote
+	active_rote = rote
+	old_rote?.action?.refresh_state()
+	rote?.action?.refresh_state()
 
 // TODO: Add a standby mode where splat is attatched to body to allow possessing admin spawns to properly become a mage
 /datum/splat/mage/on_gain()
@@ -51,6 +63,10 @@
 	UnregisterSignal(owner, list(COMSIG_MOB_LOGIN, COMSIG_HUMAN_CHARACTER_SETUP_FINISHED))
 
 	true_owner = owner.mind
+
+	if (!rotes)
+		rotes = list()
+		rotes.len = MAGICK_MAX_ROTES
 
 	if (!rote_builder_action)
 		rote_builder_action = new(true_owner)

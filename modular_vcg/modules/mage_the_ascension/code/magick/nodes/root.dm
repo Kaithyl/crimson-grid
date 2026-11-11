@@ -1,14 +1,12 @@
 /datum/rote_node/root/
 	abstract_type = /datum/rote_node/root/
-	tags = MAGICK_TAG_ROOT | MAGICK_TAG_DATA
+	tags = MAGICK_TAG_DATA
 
 	complexity = 1
 
-	var/needs_crosshair = FALSE
-
 	var/out_target = "out_target"
 
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -57,7 +55,7 @@
 /datum/rote_node/root/target_melee/_turf
 	name = "Target (Melee Turf)"
 	melee_target_type = /turf
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_TURF | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -65,7 +63,7 @@
 /datum/rote_node/root/target_melee/_mob
 	name = "Target (Melee Mob)"
 	melee_target_type = /mob/living
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -73,7 +71,7 @@
 /datum/rote_node/root/target_melee/_obj
 	name = "Target (Melee Obj)"
 	melee_target_type = /obj
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_OBJ | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -85,7 +83,7 @@
 	name = "Target (Clicked)"
 	needs_crosshair = TRUE
 	var/clicked_target_type = /atom
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -96,7 +94,7 @@
 /datum/rote_node/root/target_clicked/_turf
 	name = "Target (Clicked Turf)"
 	clicked_target_type = /turf
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target (Turf)", "type" = MAGICK_DATATYPE_TURF | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -104,7 +102,7 @@
 /datum/rote_node/root/target_clicked/_mob
 	name = "Target (Clicked Mob)"
 	clicked_target_type = /mob
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target (Mob)", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
@@ -112,7 +110,7 @@
 /datum/rote_node/root/target_clicked/_obj
 	name = "Target (Clicked Obj)"
 	clicked_target_type = /obj
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_target = alist("name" = "Target (Obj)", "type" = MAGICK_DATATYPE_OBJ | MAGICK_DATATYPE_FLAG_SINGLE),
 	)

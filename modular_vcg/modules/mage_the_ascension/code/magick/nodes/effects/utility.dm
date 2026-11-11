@@ -1,8 +1,8 @@
 // Target mobs
 
-/datum/rote_node/effect/target_mobs
+/datum/rote_node/target_mobs
 	name = "AOE Target (Mobs)"
-	desc = "Get all mobs within a maximum radius of 7 tiles from the target."
+	desc = "Get all mobs within a maximum radius of X tiles from the target."
 	tags = MAGICK_TAG_DATA
 	max_nodes = 1
 	spheres = list(
@@ -15,17 +15,21 @@
 	var/in_target = "in_target"
 	var/out_targets = "out_targets"
 
-	inputs = alist(
+	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
 		in_radius = MAGICK_PORT_NUMBER_clamp_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5),
 		in_target = MAGICK_PORT_TARGET,
 	)
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
 		out_targets = alist("name" = "Targets (Mob)", "type" = MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST),
 	)
 
-/datum/rote_node/effect/target_mobs/cast(datum/magick_context/context)
+/datum/rote_node/target_mobs/New()
+	. = ..()
+	desc = "Get all mobs within a maximum radius of [MAGICK_LINE_OF_SIGHT_DISTANCE] tiles from the target."
+
+/datum/rote_node/target_mobs/cast(datum/magick_context/context)
 	var/radius = context.get_value(in_radius)
 	var/target = context.get_value(in_target)
 
@@ -39,9 +43,41 @@
 
 	context.assign(out_targets, targets, MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
 
+// Concatenate Strings
+
+/datum/rote_node/concact_string
+	name = "Merge (Text)"
+
+	var/in_string = "in_string"
+	var/out_string = "out_string"
+
+	inputs = new()
+	outputs = new(
+		out_string = MAGICK_PORT_STRING("Text", null),
+	)
+	extendable_ports = new()
+
+/datum/rote_node/concact_string/New()
+	. = ..()
+	for(var/i = 0 to ROTE_NODE_MAX_LIST_SIZE)
+		inputs[in_string+num2text(i)] = MAGICK_PORT_STRING("Text", null)
+
+	extendable_ports[in_string] = alist("min" = 1, "max" = ROTE_NODE_MAX_LIST_SIZE, "default" = 2)
+
+/datum/rote_node/concact_string/cast(datum/magick_context/context)
+	var/result = ""
+	for (var/i = 0 to ROTE_NODE_MAX_LIST_SIZE)
+		var/port_id = in_string + num2text(i)
+		if (!(port_id in inputs))
+			continue
+		var/datum/magick_value/value = context.get(port_id)
+		if (value != null)
+			result += value.to_string()
+	context.assign(out_string, result, MAGICK_DATATYPE_STRING | MAGICK_DATATYPE_FLAG_SINGLE)
+
 // Equals
 
-/datum/rote_node/effect/equals
+/datum/rote_node/equals
 	name = "Equals"
 	desc = "Check if two inputs are the same value."
 	tags = MAGICK_TAG_DATA
@@ -52,18 +88,18 @@
 	var/out_act_true = "out_act_true"
 	var/out_act_false = "out_act_false"
 
-	inputs = alist(
+	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
 		in_value_a = alist("name" = "Value", "type" = MAGICK_DATATYPE_ANY),
 		in_value_b = alist("name" = "Value", "type" = MAGICK_DATATYPE_ANY),
 	)
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE, // This will always trigger regardless if function is true or false
 		out_act_true = alist("name" = "True", "type" = MAGICK_DATATYPE_TRIGGER),
 		out_act_false = alist("name" = "False", "type" = MAGICK_DATATYPE_TRIGGER),
 	)
 
-/datum/rote_node/effect/equals/cast(datum/magick_context/context)
+/datum/rote_node/equals/cast(datum/magick_context/context)
 	var/value_a = context.get_value(in_value_a)
 	var/value_b = context.get_value(in_value_b)
 

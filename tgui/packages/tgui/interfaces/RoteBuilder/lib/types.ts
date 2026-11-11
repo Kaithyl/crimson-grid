@@ -6,6 +6,7 @@ export type RoteBuilderData = {
   view_only?: boolean;
   rote_data?: string;
   rote_name?: string;
+  rote_desc?: string;
 };
 
 export type UserStats = {
@@ -23,15 +24,22 @@ export type UserStats = {
 };
 
 export type PortData = {
-  key: string;
+  id: string;
   name: string;
   type: number;
   desc?: string;
   default_value?: number | string;
+  promise?: string;
   min_clamp?: number;
   max_clamp?: number;
   whitelist?: string[];
   [key: string]: unknown;
+};
+
+export type ExtendablePortGroup = {
+  min: number;
+  max: number;
+  default: number;
 };
 
 export type NodeData = {
@@ -41,9 +49,11 @@ export type NodeData = {
   tags: number;
   quintessence: number;
   complexity: number;
+  complexity_cap?: number;
   max_nodes?: number;
   min_success_cost?: number;
-  spheres: Record<string, number>[];
+  spheres: Record<string, number>[] | Record<string, Record<string, number>>;
+  extendable_ports?: Record<string, ExtendablePortGroup> | ExtendablePortGroup[];
   can_add_success: boolean;
   inputs: PortData[];
   outputs: PortData[];
@@ -62,6 +72,7 @@ export type NodeSettings = {
   min_success: number;
   max_success: number;
   sphere_index: number;
+  port_counts: Record<string, number>;
 };
 
 export type Position = { x: number; y: number };

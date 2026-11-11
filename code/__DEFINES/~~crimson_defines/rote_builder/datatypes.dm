@@ -1,6 +1,6 @@
 // Any changes should be updated in RoteBuilder\lib\constants.ts
 
-#define MAGICK_DATATYPE_ANY						0
+#define MAGICK_DATATYPE_ANY						(MAGICK_DATATYPE_STRING_OR_NUMBER | MAGICK_DATATYPE_ATOM)
 #define MAGICK_DATATYPE_TRIGGER					(1<<0)
 #define MAGICK_DATATYPE_NUMBER  				(1<<1)
 #define MAGICK_DATATYPE_STRING  				(1<<2)
@@ -20,9 +20,15 @@
 	(((out_flags) & MAGICK_DATATYPE_TRIGGER) || ((in_flags) & MAGICK_DATATYPE_TRIGGER)) \
 		? ((((out_flags) & MAGICK_DATATYPE_TRIGGER) == ((in_flags) & MAGICK_DATATYPE_TRIGGER))) \
 		: ( \
-			((((out_flags) & ~(in_flags) & MAGICK_DATATYPE_ATOM) == 0)) \
-			&& ((((out_flags) & ~(in_flags) & ~MAGICK_DATATYPE_ATOM & ~MAGICK_DATATYPE_FLAG_ORIGIN) == 0)) \
-			&& (!((in_flags) & MAGICK_DATATYPE_FLAG_ORIGIN) || ((out_flags) & MAGICK_DATATYPE_FLAG_ORIGIN)) \
+			(((out_flags) & MAGICK_DATATYPE_FLAG_LIST) == ((in_flags) & MAGICK_DATATYPE_FLAG_LIST)) \
+			&& ( \
+				((in_flags) & MAGICK_DATATYPE_STRING) \
+				|| ( \
+					((((out_flags) & ~(in_flags) & MAGICK_DATATYPE_ATOM) == 0)) \
+					&& ((((out_flags) & ~(in_flags) & ~MAGICK_DATATYPE_ATOM & ~MAGICK_DATATYPE_FLAG_ORIGIN) == 0)) \
+					&& (!((in_flags) & MAGICK_DATATYPE_FLAG_ORIGIN) || ((out_flags) & MAGICK_DATATYPE_FLAG_ORIGIN)) \
+				) \
+			) \
 		) \
 )
 
@@ -31,7 +37,9 @@
 		. = MAGICK_DATATYPE_FLAG_LIST
 		// TODO: Probably needs a more robust system for enforcing or checking monotypes
 		for(var/datum/magick_value/item in value)
-			. |= item.type
+			. |= item.type_flags
+		// drop SINGLE flag
+		. &= ~MAGICK_DATATYPE_FLAG_SINGLE
 		return
 
 	if(isnum(value))

@@ -186,7 +186,7 @@ export function FociPage() {
                   onClick={() => {
                     if (isSelected) {
                       if (assignedPath) {
-                        act('clear_sphere_instrument', {
+                        act('clear_personal_instrument', {
                           sphere: sphere.key,
                         });
                       }
@@ -281,7 +281,7 @@ export function FociPage() {
                 <Box
                   onClick={() => {
                     if (canSocket) {
-                      act('set_sphere_instrument', {
+                      act('set_personal_instrument', {
                         sphere: selectedSphere,
                         instrument: path,
                       });

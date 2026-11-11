@@ -1,5 +1,6 @@
 // THIS IS A DARKPACK UI FILE - CRIMSONGRID
-import { Button, Input } from 'tgui-core/components';
+import { useState } from 'react';
+import { Button, Input, Modal, Section, TextArea } from 'tgui-core/components';
 
 import { MAX_NODES, MAX_ROTENAME_CHARS } from '../constants';
 import type { RoteStats } from '../graph';
@@ -7,37 +8,83 @@ import type { RoteStats } from '../graph';
 type Props = {
   roteName: string;
   onNameChange: (value: string) => void;
+  onOpenDescModal: () => void;
   stats: RoteStats;
   roteCode: string | null;
   viewOnly: boolean;
-  onSave: () => void;
+  onCompile: () => void;
+  onImport: (code: string) => void;
+  canReset: boolean;
+  onReset: () => void;
 };
 
 export const SavePanel = (props: Props) => {
-  const { roteName, onNameChange, stats, roteCode, viewOnly, onSave } = props;
+  const {
+    roteName,
+    onNameChange,
+    onOpenDescModal,
+    stats,
+    roteCode,
+    viewOnly,
+    onCompile,
+    onImport,
+    canReset,
+    onReset,
+  } = props;
+  const [importOpen, setImportOpen] = useState(false);
+  const [importCode, setImportCode] = useState('');
+
+  const closeImport = () => {
+    setImportOpen(false);
+    setImportCode('');
+  };
+
+  const doImport = () => {
+    onImport(importCode);
+    closeImport();
+  };
+
   return (
     <div className="rote-builder__save-panel">
       <div className="rote-builder__save-row">
         {!viewOnly && (
-          <Input
-            fluid
-            className="rote-builder__save-name"
-            placeholder="Rote name"
-            value={roteName}
-            maxLength={MAX_ROTENAME_CHARS}
-            onChange={onNameChange}
-          />
+          <>
+            <Input
+              fluid
+              className="rote-builder__save-name"
+              placeholder="Rote name"
+              value={roteName}
+              maxLength={MAX_ROTENAME_CHARS}
+              onChange={onNameChange}
+            />
+            <Button icon="align-left" tooltip="Set rote description" onClick={onOpenDescModal} />
+          </>
         )}
         <div className="rote-builder__save-stats">
-          <div className="rote-builder__complexity">Complexity: {stats.complexity}</div>
+          <div className="rote-builder__complexity">
+            Complexity: {stats.complexity}/{stats.max_complexity}
+          </div>
           <div className="rote-builder__node-count">
             Nodes: {stats.node_count}/{MAX_NODES}
           </div>
         </div>
         {!viewOnly && (
-          <Button icon="save" color="good" onClick={onSave}>
-            Save
-          </Button>
+          <>
+            <Button icon="save" color="good" onClick={onCompile}>
+              Save
+            </Button>
+            <Button icon="file-import" color="average" onClick={() => setImportOpen(true)}>
+              Import
+            </Button>
+            <Button
+              icon="arrow-rotate-left"
+              color="average"
+              disabled={!canReset}
+              onClick={onReset}
+            >
+              Reset
+            </Button>
+          </>
         )}
       </div>
       {roteCode && (
@@ -47,6 +94,36 @@ export const SavePanel = (props: Props) => {
             {roteCode}
           </div>
         </div>
+      )}
+      {importOpen && (
+        <Modal>
+          <Section
+            title="Import Rote"
+            buttons={
+              <>
+                <Button color="red" icon="window-close" onClick={closeImport}>
+                  Cancel
+                </Button>
+                <Button
+                  color="average"
+                  icon="file-import"
+                  disabled={!importCode.trim()}
+                  onClick={doImport}
+                >
+                  Import
+                </Button>
+              </>
+            }
+          >
+            <TextArea
+              fluid
+              height="4rem"
+              placeholder="Paste a rote code here to import it..."
+              value={importCode}
+              onChange={setImportCode}
+            />
+          </Section>
+        </Modal>
       )}
     </div>
   );

@@ -2,6 +2,8 @@
 // Based on tg's IntegratedCircuit UI
 import { useMemo, useRef, useState } from 'react';
 
+import { Button, Modal, Section, TextArea } from 'tgui-core/components';
+
 import { useBackend } from '../../backend';
 import { Window } from '../../layouts';
 import { NodeCard } from './lib/components/NodeCard';
@@ -24,6 +26,8 @@ export const RoteBuilder = () => {
   const viewport = useViewport();
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [descModalOpen, setDescModalOpen] = useState(false);
+  const [descDraft, setDescDraft] = useState('');
 
   const placement = usePlacement({
     canvasRef,
@@ -49,6 +53,9 @@ export const RoteBuilder = () => {
             dispatch={editor.dispatch}
             viewport={viewport}
             readOnly={editor.viewOnly}
+            userStats={data.user_stats}
+            includeStranded={editor.compileAttempted}
+            highlightedNodes={editor.highlightedNodes}
             shortcutsEnabled={!settingsNode}
             onOpenSettings={setSettingsId}
           />
@@ -58,10 +65,17 @@ export const RoteBuilder = () => {
           <SavePanel
             roteName={editor.roteName}
             onNameChange={editor.setRoteName}
+            onOpenDescModal={() => {
+              setDescDraft(editor.roteDesc);
+              setDescModalOpen(true);
+            }}
             stats={editor.stats}
             roteCode={editor.roteCode}
             viewOnly={editor.viewOnly}
-            onSave={editor.save}
+            onCompile={editor.compile}
+            onImport={editor.importRote}
+            canReset={editor.canReset}
+            onReset={editor.resetToSaved}
           />
 
           {editor.message && (
@@ -98,6 +112,39 @@ export const RoteBuilder = () => {
               }}
               onClose={() => setSettingsId(null)}
             />
+          )}
+
+          {descModalOpen && (
+            <Modal>
+              <Section
+                title="Rote Description"
+                buttons={
+                  <>
+                    <Button color="red" icon="window-close" onClick={() => setDescModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      color="good"
+                      icon="save"
+                      onClick={() => {
+                        editor.setRoteDesc(descDraft);
+                        setDescModalOpen(false);
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </>
+                }
+              >
+                <TextArea
+                  fluid
+                  height="6rem"
+                  placeholder="Describe this rote..."
+                  value={descDraft}
+                  onChange={setDescDraft}
+                />
+              </Section>
+            </Modal>
           )}
         </div>
       </Window.Content>
