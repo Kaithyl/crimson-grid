@@ -10,15 +10,13 @@
 	// since this is a compromise between rotes and dynamic casting
 	//check_flags = NONE
 
-	// TODO: Move this into the splat instead
-	var/list/datum/action/innate/rote/rotes
+	// Temp
+	// Stores autosaved uncompiled changes
+	var/draft_name
+	var/draft_desc
+	var/draft_code
 
 	allow_observer_click = TRUE
-
-/datum/action/innate/rote_builder/New()
-	..()
-	rotes = list()
-	rotes.len = MAGICK_MAX_ROTES
 
 /datum/action/innate/rote_builder/Trigger(mob/user, trigger_flags)
 	if(!..())
@@ -64,10 +62,17 @@
 
 	data["user_stats"] = user_stats
 
-	// Temp
-	if(rotes[1])
+	// Temp for dealing with draft data, will beautify this later
+	var/datum/splat/mage/mage_splat = get_mage_splat(owner)
+	var/list/datum/magick_rote/rotes = mage_splat?.rotes
+	if(draft_code)
+		data["rote_data"] = draft_code
+		data["rote_name"] = draft_name
+		data["rote_desc"] = draft_desc
+	else if(rotes && rotes[1])
 		data["rote_data"] = rotes[1].rote_code
 		data["rote_name"] = rotes[1].name
+		data["rote_desc"] = rotes[1].desc
 
 	return data
 
@@ -83,7 +88,21 @@
 
 	switch (action)
 		if("save_rote")
+			var/draft_rote_name = copytext(trim(params["name"] || ""), 1, 41)
+			var/draft_rote_desc = copytext(trim(params["desc"] || ""), 1, 501)
+			var/draft_rote_code = params["rote_code"]
+
+			if(!istext(draft_rote_code) || !length(draft_rote_code))
+				return TRUE
+
+			draft_name = draft_rote_name
+			draft_desc = draft_rote_desc
+			draft_code = draft_rote_code
+			return TRUE
+
+		if("compile_rote")
 			var/rote_name = copytext(trim(params["name"]), 1, 41)
+			var/rote_desc = copytext(trim(params["desc"] || ""), 1, 501)
 			var/rote_rawdata = params["rote_data"]
 			var/rote_code = params["rote_code"]
 
@@ -110,195 +129,40 @@
 
 			var/datum/mind/true_owner = mage_splat.true_owner
 
-			var/datum/action/innate/rote/new_rote = new(true_owner)
+			var/datum/magick_rote/new_rote = new()
 			new_rote.name = rote_name
+			new_rote.desc = rote_desc
 			new_rote.rote_code = rote_code
 			new_rote.root_nodes = rote_data["root_nodes"]
 			new_rote.effect_graph = rote_data["effect_graph"]
+			new_rote.reverse_graph = rote_data["reverse_graph"]
 			new_rote.node_data = rote_data["node_data"]
 			new_rote.complexity = rote_data["complexity"]
 			new_rote.expected_success_cost = rote_data["expected_success_cost"]
 			new_rote.expected_quint_cost = rote_data["expected_quint_cost"]
 
 			// Replace old rote
-			if(rotes[1])
-				rotes[1].Remove(usr)
-				rotes[1].clear()
-				qdel(rotes[1])
+			var/datum/magick_rote/old_rote = mage_splat.rotes[1]
+			if(old_rote)
+				if(old_rote.action)
+					old_rote.action.Remove(usr)
+					qdel(old_rote.action)
+				qdel(old_rote)
 
-			rotes[1] = new_rote
-			new_rote.Grant(usr)
+			var/datum/action/innate/rote/new_action = new(true_owner, new_rote)
+			mage_splat.rotes[1] = new_rote
+			new_action.Grant(usr)
 			to_chat(usr, span_notice("You save the rote \"[rote_name]\" to the first rote slot."))
 			return TRUE
 
 	return FALSE
 
 /datum/action/innate/rote_builder/proc/validate_rote_data(mob/living/user, rote_rawdata)
-	var/list/parsed = json_decode(rote_rawdata)
-	if(!istype(parsed) || !islist(parsed["nodes"]) || !islist(parsed["connections"]))
-		validation_fail(user, "rote data has no 'nodes'/'connections' lists (raw: [copytext(rote_rawdata, 1, 256)])")
+	var/list/result = compile_rote(user, rote_rawdata)
+	if(!result[1])
+		validation_fail(user, result[2])
 		return null
-
-	var/list/nodes = GLOB.rotebuilder_static_data["nodes"]
-	var/list/type_counts = list()
-	var/list/known_ids = list()
-	var/list/types_by_id = list()
-	var/list/node_instances = list()
-	var/list/connected_inputs = list()
-	var/list/root_nodes = list()
-	var/alist/effect_graph = new()
-	var/alist/node_data = new()
-	var/complexity_sum = 0
-	var/expected_success_cost = 0
-	var/expected_quint_cost = 0
-	var/root_count = 0
-	var/node_count = 0
-
-	for(var/list/node in parsed["nodes"])
-		if(!islist(node))
-			validation_fail(user, "node #[node_count + 1] is not a list: [json_encode(node)]")
-			return null
-
-		node_count++
-		if(node_count > MAGICK_MAX_NODES)
-			validation_fail(user, "node count [node_count] exceeds MAGICK_MAX_NODES ([MAGICK_MAX_NODES])")
-			return null
-
-		var/id = "[node["id"]]"
-		if(!length(id) || known_ids[id])
-			validation_fail(user, "node #[node_count] has invalid/duplicate id '[id]'")
-			return null
-		known_ids[id] = TRUE
-
-		var/type_index = isnum(node["type_index"]) ? round(node["type_index"]) : text2num("[node["type_index"]]")
-		if(isnull(type_index) || type_index < 1 || type_index > length(nodes))
-			validation_fail(user, "node #[node_count] (id '[id]') has out of range type_index '[type_index]' (nodes: [length(nodes)])")
-			return null
-
-		var/list/node_def = nodes[type_index]
-		types_by_id[id] = node_def
-
-		// Check if per-type max nodes
-		var/max_nodes = node_def["max_nodes"]
-		if(max_nodes)
-			if((type_counts[node_def["type"]] || 0) >= max_nodes)
-				validation_fail(user, "node #[node_count] (id '[id]') exceeds max_nodes [max_nodes] for node '[node_def["name"]]'")
-				return null
-			type_counts[node_def["type"]] = (type_counts[node_def["type"]] || 0) + 1
-
-		// Check sphere requirements
-		var/list/options = node_def["spheres"]
-		if(options)
-			var/sphere_index = isnum(node["sphere_index"]) ? round(node["sphere_index"]) : text2num("[node["sphere_index"]]")
-			if(isnull(sphere_index) || sphere_index < 1 || sphere_index > length(options) || !validate_spheres(user, options[sphere_index]))
-				validation_fail(user, "node #[node_count] (id '[id]', node '[node_def["name"]]') failed sphere requirements (sphere_index '[sphere_index]', options: [json_encode(options)])")
-				return null
-
-		// Resolve the node singleton
-		var/node_type = text2path(node_def["type"])
-		var/datum/rote_node/node_singleton = GLOB.rote_nodes[node_type]
-		if(!node_singleton)
-			validation_fail(user, "node #[node_count] (id '[id]') has unknown node type '[node_def["type"]]'")
-			return null
-
-		// Build per-node data
-		var/datum/rote_node_data/node_data_entry = new()
-		node_data_entry.node = node_singleton
-		if(node["port_values"])
-			node_data_entry.port_values = node["port_values"]
-		if(node["userdata"])
-			var/list/userdata = node["userdata"]
-			node_data_entry.label = userdata["label"]
-			node_data_entry.success_percentage = userdata["success_percentage"]
-			node_data_entry.min_success = userdata["min_success"]
-			node_data_entry.max_success = userdata["max_success"]
-		node_data[id] = node_data_entry
-
-		node_instances[id] = node_singleton
-
-		if(node_def["tags"] & MAGICK_TAG_ROOT)
-			root_count++
-			root_nodes += id
-
-		complexity_sum += node_def["complexity"]
-		expected_success_cost += node_def["min_success_cost"]
-		expected_quint_cost += node_def["quintessence"]
-
-	if(!root_count)
-		validation_fail(user, "rote has no root nodes")
-		return null
-
-	// Build connections
-	for(var/list/connection in parsed["connections"])
-		if(!islist(connection))
-			validation_fail(user, "connection is not a list: [json_encode(connection)]")
-			return null
-
-		var/out_id = "[connection["out_id"]]"
-		var/in_id = "[connection["in_id"]]"
-		var/out_key = "[connection["out_port"]]"
-		var/in_key = "[connection["in_port"]]"
-		if(!known_ids[out_id] || !known_ids[in_id] || !length(out_key) || !length(in_key))
-			validation_fail(user, "connection out_id '[out_id]' -> in_id '[in_id]' (out_port '[out_key]', in_port '[in_key]') references unknown nodes or empty ports")
-			return null
-
-		var/datum/rote_node/source = node_instances[out_id]
-		var/datum/rote_node/target = node_instances[in_id]
-
-		var/alist/source_outputs = source.outputs
-		var/alist/target_inputs = target.inputs
-		var/alist/out_port_data = source_outputs ? source_outputs[out_key] : null
-		var/alist/in_port_data = target_inputs ? target_inputs[in_key] : null
-		if(out_port_data == null || in_port_data == null)
-			validation_fail(user, "connection out_id '[out_id]' (port '[out_key]') -> in_id '[in_id]' (port '[in_key]') references unknown ports")
-			return null
-
-		if(!MAGICK_DATATYPES_VALID(out_port_data["type"], in_port_data["type"]))
-			validation_fail(user, "connection out_id '[out_id]' (port '[out_key]', '[out_port_data["name"]]', type [out_port_data["type"]]) -> in_id '[in_id]' (port '[in_key]', '[in_port_data["name"]]', type [in_port_data["type"]]) has incompatible port types")
-			return null
-
-		connected_inputs[in_id] = TRUE
-
-		// Build the effect graph dictionary
-		if(!effect_graph[out_id])
-			effect_graph[out_id] = alist()
-		if(!effect_graph[out_id][out_key])
-			effect_graph[out_id][out_key] = list()
-		effect_graph[out_id][out_key] += list(list(out_key, in_key, in_id))
-
-	// Check for islands
-	for(var/id in known_ids)
-		if(types_by_id[id]["tags"] & MAGICK_TAG_ROOT)
-			continue
-		if(connected_inputs[id])
-			continue
-
-		var/list/node_def = types_by_id[id]
-		var/list/inputs = node_def["inputs"]
-		var/has_required_input = FALSE
-		for(var/list/input_data in inputs)
-			if(input_data["default_value"] == null)
-				has_required_input = TRUE
-				break
-
-		if(has_required_input)
-			validation_fail(user, "node '[id]' ('[node_def["name"]]') is unreachable but has required inputs")
-			return null
-
-	return alist(
-		"root_nodes" = root_nodes,
-		"effect_graph" = effect_graph,
-		"node_data" = node_data,
-		"complexity" = complexity_sum,
-		"expected_success_cost" = expected_success_cost,
-		"expected_quint_cost" = expected_quint_cost,
-	)
-
-/datum/action/innate/rote_builder/proc/validate_spheres(mob/living/user, list/option)
-	for(var/sphere in option)
-		if(user.st_get_stat(ALL_SPHERES[sphere]) < option[sphere])
-			return FALSE
-	return TRUE
+	return result[1]
 
 /datum/action/innate/rote_builder/proc/validation_fail(mob/living/user, fail_reason)
 	PRIVATE_PROC(TRUE)

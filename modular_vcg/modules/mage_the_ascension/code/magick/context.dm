@@ -1,15 +1,35 @@
 // Container for important global values per spell
 /datum/magick_context
 	var/mob/caster
+	// Mage splat of caster
+	var/datum/splat/mage/mage_splat
 	var/successes
-	var/complexity
+	var/complexity = 0
+	var/complexity_cap = 0
 	//var/explains = 0
 	var/paradox = FALSE
 	var/nodes_traversed = 0
+
+	var/aborted = FALSE
+	var/interrupted = FALSE
+	var/arete_locked_in = FALSE
+	var/foci_cast = FALSE
+
+	var/difficulty_mod = 0
+	var/willpower_auto_success = FALSE
+	var/quint_diff_reduction = 0
+	var/discarded_instrument_bonus = FALSE
+	var/instrument_penalty = 0
+
+	var/list/visited_nodes = list()
+	var/list/visited_node_types = list()
+
 	var/debug = FALSE
 
 	// alist<rote_node, alist<output_port_key, list<list(out_port_key, in_port_key, child)>>>
 	var/alist/effect_graph
+	// alist<rote_node, alist<input_port_key, list<list(out_port_key, in_port_key, source)>>>
+	var/alist/reverse_graph
 
 	// alist<node_id, /datum/rote_node_data>
 	// Per-node userdata configured in the rote builder
@@ -35,6 +55,8 @@
 	var/max_success
 	// alist<"port_[port_key]", value>
 	var/alist/port_values
+	// alist<id_prefix, visible port count> for extendable ports
+	var/alist/port_counts
 
 /datum/magick_context/New()
 	..()
@@ -83,13 +105,24 @@
 		src.type_flags = magick_get_datatype(value)
 	src.value = value
 
+// Converts payload into a BYOND string
+// Datums without a name return "Unknown" instead of their path
+/datum/magick_value/proc/to_string()
+	if (isdatum(value))
+		var/datum/D = value
+		if (!("name" in D.vars))
+			return "Unknown"
+	return "[value]"
+
 // Returns the singleton for a node, defaulting to the node currently being executed
 /datum/magick_context/proc/get_node(node_id = current_node_id)
+	RETURN_TYPE(/datum/rote_node_data)
 	var/datum/rote_node_data/data = node_data ? node_data[node_id] : null
 	return data?.node
 
 // helper function for getting the port definition
 /datum/magick_context/proc/get_port(port)
+	RETURN_TYPE(/alist)
 	PRIVATE_PROC(TRUE)
 	var/datum/rote_node/node = get_node()
 	if (node == null)
@@ -101,6 +134,7 @@
 
 // returns the magick_value, or null if the port is unset
 /datum/magick_context/proc/get(port)
+	RETURN_TYPE(/datum/magick_value)
 	if (get_port(port) == null)
 		return null
 	var/datum/magick_scope/current = scope
@@ -146,7 +180,7 @@
 		var/datum/magick_value/value_ref = value
 		if (type_flags == null)
 			type_flags = value_ref.type_flags
-		// Inherit port flags (e.g. FLAG_ORIGIN) that the value doesn't inherently have
+		// Inherit port flags
 		type_flags |= (def["type"] & (MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE | MAGICK_DATATYPE_FLAG_LIST))
 		if (!MAGICK_DATATYPES_VALID(type_flags, def["type"]))
 			stack_trace("Rote Builder Port '[def["name"]]' (node '[current_node_id]' :: [port]) received incompatible types. Expected: [def["type"]], got: [type_flags]")
@@ -155,7 +189,7 @@
 	else
 		if (type_flags == null)
 			type_flags = magick_get_datatype(value)
-		// Inherit port flags (e.g. FLAG_ORIGIN) that the value doesn't inherently have
+		// Inherit port flags
 		type_flags |= (def["type"] & (MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE | MAGICK_DATATYPE_FLAG_LIST))
 		if (!MAGICK_DATATYPES_VALID(type_flags, def["type"]))
 			stack_trace("Rote Builder Port '[def["name"]]' (node '[current_node_id]' :: [port]) received incompatible types. Expected: [def["type"]], got: [type_flags]")

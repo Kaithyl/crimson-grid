@@ -1,3 +1,5 @@
+/// These are for defines that are related to the character sheet
+
 #define MAX_SPHERE 5
 
 #define MAX_ARETE 10

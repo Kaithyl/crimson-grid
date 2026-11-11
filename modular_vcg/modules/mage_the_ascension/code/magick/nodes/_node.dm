@@ -10,6 +10,9 @@
 	// Mostly to prevent lag for costly effects
 	var/max_nodes
 
+	// requires the caster to pick a target with a crosshair
+	var/needs_crosshair = FALSE
+
 	// How much complexity this node takes up
 	var/complexity = 0
 
@@ -24,43 +27,78 @@
 	var/alist/inputs
 	var/alist/outputs
 
+	// alist<id_prefix = alist("min" = 1, "max" = MAGICK_MAX_LIST_SIZE, "default" = 1)>
+	// Port key = id_prefix + index
+	var/alist/extendable_ports
+
 GLOBAL_LIST_INIT_TYPED(rote_nodes, /datum/rote_node, init_subtypes_w_path_keys(/datum/rote_node, list()))
 GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 
-/datum/rote_node/proc/is_ready(datum/magick_context/context)
+// Whether this node can be cast without being activated by a parent node.
+// Any changes to this should be reflected in
+// RoteBuilder\lib\validator.ts\canCastUnprompted()
+/datum/rote_node/proc/can_cast_unprompted(datum/rote_node_data/node_data)
 	var/alist/input_defs = src.inputs
 	for (var/port_key as anything in input_defs)
-		if (context.get(port_key) == null)
-			// Check if this port has an incoming connection in the effect graph
-			var/has_connection = FALSE
-			for (var/source_id as anything in context.effect_graph)
-				var/alist/out_edges = context.effect_graph[source_id]
-				for (var/out_port_key as anything in out_edges)
-					for (var/list/tuple as anything in out_edges[out_port_key])
-						if (tuple[3] == context.current_node_id && tuple[2] == port_key)
-							has_connection = TRUE
-							break
-					if (has_connection)
-						break
-				if (has_connection)
-					break
-			if (has_connection)
-				return FALSE
+		var/alist/port_def = input_defs[port_key]
+		if (port_def == null)
+			continue
+		// Optional port
+		if (port_def["default_value"] == "")
+			continue
+		// Player inputted value from the rote builder
+		if (node_data?.port_values?["port_[port_key]"] != null)
+			continue
+		return FALSE
+	return TRUE
+
+/datum/rote_node/proc/is_ready(datum/magick_context/context)
+	var/alist/in_edges = context.reverse_graph ? context.reverse_graph[context.current_node_id] : null
+	var/alist/input_defs = src.inputs
+	for (var/port_key as anything in input_defs)
+		if (context.get(port_key) != null)
+			continue
+		// if not optional or optional but has wire, wait for port to be filled
+		if (in_edges?[port_key])
+			return FALSE
 	return TRUE
 
 // For handling pre and post cast
 /datum/rote_node/proc/__cast(datum/magick_context/context)
 	SHOULD_NOT_OVERRIDE(TRUE)
-	// Fizzle spell if someone manages to pass the traversal limit
-	if (++context.nodes_traversed > MAGICK_MAX_TRAVERSAL)
+	// Force stop spell if someone manages to pass the traversal limit
+	if (++context.nodes_traversed > ROTE_MAX_TRAVERSAL)
 		return
 
 	// Prevent large spell graphs from monopolizing server execution
-	if (context.nodes_traversed % MAGICK_SLEEP_INTERVAL == 0)
+	if (context.nodes_traversed % ROTE_SLEEP_INTERVAL == 0)
 		sleep(0)
 
-	pre_cast(context)
-	cast(context)
+	// Effects that require successes are skipped before the arete roll
+	if (!context.arete_locked_in && istype(src, /datum/rote_node/effect))
+		var/datum/rote_node/effect/effect_node = src
+		if (effect_node.min_success_cost > 0)
+			return
+
+	if (!(context.arete_locked_in && (tags & MAGICK_TAG_FOCI)))
+		// increase the complexity cap once per foci type
+		if ((tags & MAGICK_TAG_FOCI) && !ROTE_NODE_TYPE_VISITED(context, type))
+			var/datum/rote_node/focus/focus_node = src
+			context.complexity_cap += focus_node.complexity_cap
+
+		// count complexity for each node on first traversal
+		if (!ROTE_NODE_VISITED(context, context.current_node_id))
+			if (context.complexity > context.complexity_cap && complexity > 0)
+				context.aborted = TRUE
+				return
+			context.complexity += complexity
+
+		pre_cast(context)
+		context.visited_nodes |= context.current_node_id
+		context.visited_node_types |= type
+		if (context.aborted || context.interrupted)
+			return
+		cast(context)
 
 	if (context.debug)
 		debug_to_user(context)
@@ -80,7 +118,6 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 // Only override for custom handling of child nodes.
 // Uses the effect graph dictionary on the context set by the rote.
 // auto_traverse is only here to make code reuse easier for iteration/for each nodes
-// TODO: replace auto_traverse when if there is a better architecture
 /datum/rote_node/proc/post_cast(datum/magick_context/context, auto_traverse = TRUE)
 	PROTECTED_PROC(TRUE)
 	var/node_id = context.current_node_id
@@ -88,28 +125,40 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 	if (edges == null)
 		return
 
+	var/datum/rote_node/current = context.get_node()
+	var/has_trigger_out = FALSE
+	for (var/port_key as anything in current?.outputs)
+		var/alist/trigger_port_def = current.outputs[port_key]
+		if (trigger_port_def != null && (trigger_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
+			has_trigger_out = TRUE
+			break
+
 	// Activate children by default
-	if (auto_traverse && edges[out_act] && inputs?[in_act] && outputs?[out_act] && context.get(out_act) == null)
+	if (auto_traverse && has_trigger_out && edges[out_act] && current?.inputs?[in_act] && context.get(out_act) == null)
 		var/incoming = context.get_value(in_act)
 		if (incoming != null)
 			context.assign(out_act, incoming, MAGICK_DATATYPE_TRIGGER)
 
-	// count trigger branches per output port for success splitting
 	var/alist/trigger_branches = new()
-	for (var/out_port_key as anything in edges)
-		if (context.get(out_port_key) == null)
-			continue
-		var/count = 0
-		for (var/list/tuple as anything in edges[out_port_key])
-			var/in_port_key = tuple[2]
-			var/child_id = tuple[3]
-			var/datum/rote_node/child = context.get_node(child_id)
-			var/alist/child_inputs = child.inputs
-			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
-			if (in_port_def != null && (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
-				count++
-		if (count)
-			trigger_branches[out_port_key] = count
+	if (has_trigger_out)
+		for (var/out_port_key as anything in edges)
+			if (context.get(out_port_key) == null)
+				continue
+			// Only trigger actual output ports
+			var/alist/out_port_def = current.outputs[out_port_key]
+			if (out_port_def == null || !(out_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
+				continue
+			var/count = 0
+			for (var/list/tuple as anything in edges[out_port_key])
+				var/in_port_key = tuple[2]
+				var/child_id = tuple[3]
+				var/datum/rote_node/child = context.get_node(child_id)
+				var/alist/child_inputs = child.inputs
+				var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
+				if (in_port_def != null && (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
+					count++
+			if (count)
+				trigger_branches[out_port_key] = count
 
 	// fill ports and check is_ready() after each fill
 	for (var/out_port_key as anything in edges)
@@ -192,9 +241,10 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 			"complexity" = node.complexity,
 			"max_nodes" = node.max_nodes,
 			"spheres" = node.spheres,
+			"extendable_ports" = node.extendable_ports,
 		)
 
-		// Effect-specific fields, defaulted for non-effect nodes
+		// Effect nodes
 		if(istype(node, /datum/rote_node/effect))
 			var/datum/rote_node/effect/effect_node = node
 			node_data["quintessence"] = effect_node.quintessence
@@ -205,17 +255,25 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 			node_data["min_success_cost"] = 0
 			node_data["can_add_success"] = FALSE
 
+		if(istype(node, /datum/rote_node/focus))
+			var/datum/rote_node/focus/focus_node = node
+			node_data["complexity_cap"] = focus_node.complexity_cap
+		else
+			node_data["complexity_cap"] = 0
+
 		var/list/inputs_list = list()
 		var/list/outputs_list = list()
 
-		for(var/port_key as anything in node.inputs)
-			var/alist/def = node.inputs[port_key]
+		// Ports
+		for(var/port_id as anything in node.inputs)
+			var/alist/def = node.inputs[port_id]
 			var/list/port_data = list(
-				"key" = port_key,
+				"id" = port_id,
 				"name" = def["name"],
 				"type" = def["type"],
 				"desc" = def["desc"],
 				"default_value" = def["default_value"],
+				"promise" = def["promise"],
 			)
 			if (def["type"] & MAGICK_DATATYPE_NUMBER)
 				if (def["min_clamp"] != null)
@@ -226,14 +284,13 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 				if (def["whitelist"] != null)
 					port_data["whitelist"] = def["whitelist"]
 			UNTYPED_LIST_ADD(inputs_list, port_data)
-		for(var/port_key as anything in node.outputs)
-			var/alist/def = node.outputs[port_key]
+		for(var/port_id as anything in node.outputs)
+			var/alist/def = node.outputs[port_id]
 			var/list/port_data = list(
-				"key" = port_key,
+				"id" = port_id,
 				"name" = def["name"],
 				"type" = def["type"],
 				"desc" = def["desc"],
-				"default_value" = def["default_value"],
 			)
 			UNTYPED_LIST_ADD(outputs_list, port_data)
 

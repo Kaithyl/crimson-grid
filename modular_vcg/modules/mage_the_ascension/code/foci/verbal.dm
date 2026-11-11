@@ -7,6 +7,9 @@
 	//icon = 'icons/mob/effects/talk.dmi'
 	//icon_state = "default0"
 
+	cast_time = 1 SECONDS
+	timed_action_flags = IGNORE_USER_LOC_CHANGE | IGNORE_HELD_ITEM
+
 	var/required_language
 
 /datum/magick_focus/verbal/can_use(mob/user)
@@ -18,5 +21,5 @@
 
 /datum/magick_focus/verbal/vow_spirit
 	name = "Verbal Action - Vow (Spirit)"
-	paradigms = PARADIGM_ANIMIST
+	paradigms = PARADIGM_MYSTIC | PARADIGM_ANIMIST
 	desc = "Make a vow with a spirit."

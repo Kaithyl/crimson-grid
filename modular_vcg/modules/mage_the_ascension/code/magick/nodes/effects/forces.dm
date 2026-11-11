@@ -10,6 +10,7 @@
 	name = "Fireball"
 	tags = MAGICK_TAG_DAMAGE
 	min_success_cost = 2
+	complexity = 2
 	can_add_success = TRUE
 	spheres = list(
 		alist(
@@ -21,13 +22,13 @@
 	var/in_origin = "in_origin"
 	var/in_target = "in_target"
 
-	inputs = alist(
+	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
 		in_origin = MAGICK_PORT_ORIGIN,
 		in_target = MAGICK_PORT_TARGET,
 	)
 
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE
 	)
 
@@ -80,6 +81,7 @@
 	name = "Lightning Bolt"
 	tags = MAGICK_TAG_DAMAGE
 	min_success_cost = 2
+	complexity = 2
 	can_add_success = TRUE
 	spheres = list(
 		alist(
@@ -91,13 +93,13 @@
 	var/in_origin = "in_origin"
 	var/in_target = "in_target"
 
-	inputs = alist(
+	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
 		in_origin = MAGICK_PORT_ORIGIN,
 		in_target = MAGICK_PORT_TARGET,
 	)
 
-	outputs = alist(
+	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE
 	)
 

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Box, Button, Dropdown, Input, Modal, NumberInput, Section, Stack } from 'tgui-core/components';
 
+import { sphereOptions as getSphereOptions } from '../serializer';
 import type { NodeData, NodeSettings } from '../types';
 
 type Props = {
@@ -24,7 +25,7 @@ export const NodeSettingsMenu = ({ node, settings, readOnly, onSave, onClose }: 
   const [maxSuccess, setMaxSuccess] = useState(settings.max_success);
   const [sphereIndex, setSphereIndex] = useState(settings.sphere_index);
 
-  const sphereOptions = (node.spheres ?? []).map(sphereOptionText);
+  const sphereOptions = getSphereOptions(node).map(sphereOptionText);
 
   const save = () =>
     onSave({
@@ -33,6 +34,7 @@ export const NodeSettingsMenu = ({ node, settings, readOnly, onSave, onClose }: 
       min_success: minSuccess,
       max_success: maxSuccess,
       sphere_index: sphereIndex,
+      port_counts: settings.port_counts,
     });
 
   return (
