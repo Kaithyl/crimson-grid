@@ -4,14 +4,14 @@
 	var/in_message = "in_message"
 
 	inputs = alist(
-		in_act = MAGICK_PORT_ACTIVATE_root,
-		in_message = MAGICK_PORT_STRING_required("Text", null)
+		in_act = MAGICK_PORT_ACTIVATE,
+		in_message = MAGICK_PORT_STRING_REQUIRED("Text", null)
 	)
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
 	)
 
-/datum/rote_node/focus/verbal/cast(datum/magick_context/context)
+/datum/rote_node/focus/verbal/perform(datum/magick_context/context)
 	var/mob/caster = context.caster
 	if (!caster)
 		return
@@ -36,7 +36,7 @@
 
 	var/cut = round(length(message) * 0.5)
 	var/spoken = copytext(message, 1, cut + 1)
-	caster.say("[spoken]—")
+	caster.say("[spoken]-")
 
 /datum/rote_node/focus/verbal/vow_spirit
 	focus_type = /datum/magick_focus/verbal/vow_spirit

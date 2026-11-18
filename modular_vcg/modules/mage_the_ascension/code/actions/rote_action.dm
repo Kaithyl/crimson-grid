@@ -32,9 +32,8 @@
 	// Only the rote currently being focused on can be cancelled or force cast
 	var/datum/splat/mage/mage_splat = get_mage_splat(owner)
 	return mage_splat?.active_rote == rote \
-		&& !rote.active_context.arete_locked_in \
-		&& !rote.active_context.aborted \
-		&& !rote.active_context.interrupted
+		&& !rote.active_context.has_consumed_successes \
+		&& rote.active_context.status == ROTE_NOT_INTERRUPTED
 
 /datum/action/innate/rote/proc/get_desc()
 	PRIVATE_PROC(TRUE)
@@ -43,11 +42,7 @@
 	if (!can_cancel_or_force())
 		desc = rote_desc
 		return
-	var/list/context = list(
-		SCREENTIP_CONTEXT_LMB = "Cancel",
-		SCREENTIP_CONTEXT_RMB = "Force Cast",
-	)
-	var/front = "[build_context(context, SCREENTIP_CONTEXT_LMB, TRUE)] | [build_context(context, SCREENTIP_CONTEXT_RMB, TRUE)]"
+	var/front = "\[LMB\] Cancel | \[RMB\] Force Cast"
 	desc = "[front]\n\n[rote_desc]"
 
 /datum/action/innate/rote/Destroy()
@@ -80,17 +75,17 @@
 			// Right-clicking or using the hotkey (clicker is null) force casts
 			var/force_cast = !!(trigger_flags & TRIGGER_SECONDARY_ACTION) || isnull(clicker)
 			if (force_cast)
-				rote.active_context.interrupted = TRUE
+				rote.active_context.status = ROTE_INTERRUPT_FORCE_CAST
 				to_chat(user, span_notice("You force the spell to completion."))
 			else
-				rote.active_context.aborted = TRUE
+				rote.active_context.status = ROTE_INTERRUPT_CANCEL
 				to_chat(user, span_notice("You stop focusing on your spell."))
 		return TRUE
 
 	// Only one rote may be cast at a time, so cancel any other casts
 	var/datum/splat/mage/mage_splat = get_mage_splat(user)
 	if (mage_splat?.active_rote)
-		mage_splat.active_rote.active_context.aborted = TRUE
+		mage_splat.active_rote.active_context.status = ROTE_INTERRUPT_CANCEL
 
 	// If already in targeting mode, toggle off
 	if (click_action && owner?.click_intercept == src)
@@ -101,7 +96,7 @@
 
 	// Determine which root nodes need target selection
 	var/list/needs_selection = list()
-	for (var/node_id as anything in rote.root_nodes)
+	for (var/node_id as anything in rote.source_nodes)
 		var/datum/rote_node_data/node_data_entry = rote.node_data ? rote.node_data[node_id] : null
 		var/datum/rote_node/node = node_data_entry?.node
 		if (node?.needs_crosshair)
@@ -118,7 +113,7 @@
 		return TRUE
 
 	// All nodes are self-select, cast directly without targeting mode
-	rote.Cast(user)
+	rote.pre_cast(user)
 	return TRUE
 
 /datum/action/innate/rote/do_ability(mob/living/clicker, atom/clicked_on)
@@ -142,7 +137,7 @@
 
 	var/node_id = rote.pending_target_nodes[1]
 	var/datum/rote_node_data/node_data_entry = rote.node_data ? rote.node_data[node_id] : null
-	var/datum/rote_node/root/node = node_data_entry?.node
+	var/datum/rote_node/source/node = node_data_entry?.node
 	if (!istype(node))
 		rote.pending_target_nodes -= node_id
 		return TRUE
@@ -153,7 +148,7 @@
 
 	// Assign the clicked atom as the target for the next pending root node
 	rote.pending_target_nodes -= node_id
-	node_data_entry.target = clicked_on
+	node.push_target(rote, node_id, clicked_on)
 
 	if (length(rote.pending_target_nodes))
 		to_chat(user, span_notice(MAGICK_TARGET_ENABLE_TEXT(node_data_entry?.label, length(rote.pending_target_nodes))))
@@ -161,7 +156,7 @@
 
 	// Cast when all targets have been assigned
 	unset_ranged_ability(user)
-	rote.Cast(user)
+	rote.pre_cast(user)
 	return TRUE
 
 /datum/action/innate/rote/Remove(mob/removed_from)
@@ -170,7 +165,7 @@
 	if (rote)
 		rote.pending_target_nodes = null
 		if (ROTE_IS_CASTING(rote))
-			rote.active_context.aborted = TRUE
+			rote.active_context.status = ROTE_INTERRUPT_CANCEL
 	return ..()
 
 // Only show the focus overlay while this rote is actively casting

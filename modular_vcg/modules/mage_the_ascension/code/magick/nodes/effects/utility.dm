@@ -17,7 +17,7 @@
 
 	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
-		in_radius = MAGICK_PORT_NUMBER_clamp_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5),
+		in_radius = MAGICK_PORT_NUMBER_CLAMP_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5),
 		in_target = MAGICK_PORT_TARGET,
 	)
 	outputs = new(
@@ -29,12 +29,13 @@
 	. = ..()
 	desc = "Get all mobs within a maximum radius of [MAGICK_LINE_OF_SIGHT_DISTANCE] tiles from the target."
 
-/datum/rote_node/target_mobs/cast(datum/magick_context/context)
+/datum/rote_node/target_mobs/execute(datum/magick_context/context)
 	var/radius = context.get_value(in_radius)
 	var/target = context.get_value(in_target)
 
 	if (!target)
 		context.assign(out_targets, list(), MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+		context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
 		return
 
 	var/list/targets = list()
@@ -42,6 +43,7 @@
 		targets += new /datum/magick_value(living_mob)
 
 	context.assign(out_targets, targets, MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_LIST)
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
 
 // Concatenate Strings
 
@@ -64,7 +66,7 @@
 
 	extendable_ports[in_string] = alist("min" = 1, "max" = ROTE_NODE_MAX_LIST_SIZE, "default" = 2)
 
-/datum/rote_node/concact_string/cast(datum/magick_context/context)
+/datum/rote_node/concact_string/execute(datum/magick_context/context)
 	var/result = ""
 	for (var/i = 0 to ROTE_NODE_MAX_LIST_SIZE)
 		var/port_id = in_string + num2text(i)
@@ -99,14 +101,13 @@
 		out_act_false = alist("name" = "False", "type" = MAGICK_DATATYPE_TRIGGER),
 	)
 
-/datum/rote_node/equals/cast(datum/magick_context/context)
+/datum/rote_node/equals/execute(datum/magick_context/context)
 	var/value_a = context.get_value(in_value_a)
 	var/value_b = context.get_value(in_value_b)
 
-	var/matched = (value_a == value_b)
-	var/successes = context.get_value(in_act) || 0
-
-	context.assign(matched ? out_act_true : out_act_false, successes, MAGICK_DATATYPE_TRIGGER)
+	// Only the matching branch should be signaled
+	context.assign(value_a == value_b ? out_act_true : out_act_false, TRUE, MAGICK_DATATYPE_TRIGGER)
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
 
 // Count
 
@@ -117,7 +118,7 @@
 	var/datum/magick_port/input/in_list = MAGICK_PORT_TARGETS
 	var/datum/magick_port/output/out_num = MAGICK_PORT_NUMBER
 
-/datum/rote_node/effect/count/cast(datum/magick_context/context)
+/datum/rote_node/effect/count/execute(datum/magick_context/context)
 	var/list/targets = in_list.get_value(context)
 	out_num.assign(context, length(targets))*/
 
@@ -131,7 +132,7 @@
 	var/datum/magick_port/input/in_b = MAGICK_PORT_NUMBER
 	var/datum/magick_port/output/out_sum = MAGICK_PORT_NUMBER
 
-/datum/rote_node/effect/add/cast(datum/magick_context/context)
+/datum/rote_node/effect/add/execute(datum/magick_context/context)
 	var/a = context.get(in_a)
 	var/b = context.get(in_b)
 	context.assign(out_sum, a + b, MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE)*/

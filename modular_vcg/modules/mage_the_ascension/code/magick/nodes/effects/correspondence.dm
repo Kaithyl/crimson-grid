@@ -1,5 +1,6 @@
 /*
- * TODO: Increase successes required depending on distance or sympathetic connection
+ * 	TODO: Increase successes required depending on distance or sympathetic connection
+ *  TODO: Make secret cordon (ghost blocking) block correspondence effects like accidental teleportation or scrying
  */
 
 // Ranged effect
@@ -28,12 +29,13 @@
 		out_origin = alist("name" = "Origin", "type" = MAGICK_DATATYPE_ATOM | MAGICK_DATATYPE_FLAG_ORIGIN | MAGICK_DATATYPE_FLAG_SINGLE),
 	)
 
-/datum/rote_node/effect/ranged_effect/cast(datum/magick_context/context)
+/datum/rote_node/effect/ranged_effect/execute(datum/magick_context/context)
 	var/datum/magick_value/target = context.get(in_target)
 	if (!target)
 		return
 	target.type_flags |= MAGICK_DATATYPE_FLAG_ORIGIN
 	context.assign(out_origin, target)
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
 
 // Teleport (Self)
 
@@ -59,10 +61,11 @@
 		out_act = MAGICK_PORT_ACTIVATE,
 	)
 
-/datum/rote_node/effect/teleport_self/cast(datum/magick_context/context)
+/datum/rote_node/effect/teleport_self/execute(datum/magick_context/context)
 	var/target = context.get_value(in_target)
 	if (!target)
 		return
 
 	var/mob/caster = context.caster
 	caster.forceMove(get_turf(target))
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)

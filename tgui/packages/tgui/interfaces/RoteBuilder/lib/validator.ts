@@ -1,10 +1,10 @@
 // THIS IS A DARKPACK UI FILE - CRIMSONGRID
-import { FLAG_TRIGGER, MAX_NODES, TAG_CAST, TAG_FOCI } from './constants';
+import { FLAG_TRIGGER, MAX_NODES, TAG_RITUAL, TAG_FOCI } from './constants';
 import {
-  fociNodes,
   getStats,
   type RoteGraph,
   type RoteStats,
+  skippedEffects,
   skippedFoci,
 } from './graph';
 import { findPort, validLink } from './ports';
@@ -21,7 +21,7 @@ export type NodeIssue = { text: string; severity: NodeIssueSeverity };
 const canCastUnprompted = (node: NodeData, values: Record<string, string>): boolean => {
   const inputs = node.inputs ?? [];
   return inputs.every(
-    (port) => port.default_value === '' || values[port.id] !== undefined,
+    (port) => port.optional || values[port.id] !== undefined,
   );
 };
 
@@ -104,10 +104,10 @@ export const computeNodeIssues = (
     }
   };
 
-  // Foci reached after the arete roll are skipped during casting
+  // Instruments that come after a node requiring successes are skipped
   const skipped = skippedFoci(graph);
-  // Effects in the foci chain that require successes are skipped
-  const foci = fociNodes(graph);
+  // Nodes requiring successes that come before an instrument are skipped
+  const skippedEffectsSet = skippedEffects(graph);
 
   const connected = new Set<string>();
   const wiredInputs = new Set<string>();
@@ -131,15 +131,15 @@ export const computeNodeIssues = (
     if (skipped.has(id)) {
       add(
         id,
-        'Instruments after the arete roll are skipped, and do not contribute complexity cap.',
+        'Instruments after a node that consumes successes are skipped, and do not contribute complexity cap.',
         'skipped',
       );
     }
 
-    if (foci.has(id) && (node.min_success_cost ?? 0) > 0) {
+    if (skippedEffectsSet.has(id)) {
       add(
         id,
-        'Effect nodes that require successes before instruments are completed are skipped.',
+        'Effect nodes that require successes before instruments are used are skipped.',
         'skipped',
       );
     }
@@ -149,11 +149,9 @@ export const computeNodeIssues = (
       if (stranded) {
         add(id, 'This node is stranded - it is not connected to the rest of the rote.', 'error');
       } else {
-        // A required port has no default and must be wired or given a value
+        // A required port is not optional and must be wired or given a value
         for (const port of node.inputs ?? []) {
-          const required =
-            (port.default_value === undefined || port.default_value === null) &&
-            (port.type & FLAG_TRIGGER) === 0;
+          const required = !port.optional && (port.type & FLAG_TRIGGER) === 0;
           if (!required) {
             continue;
           }
@@ -237,7 +235,7 @@ export const validateRote = (
     }
     countByType[node.type] = current + 1;
 
-    if ((node.tags & TAG_CAST) !== 0) {
+    if ((node.tags & TAG_RITUAL) !== 0) {
       castCount++;
     }
 
@@ -257,27 +255,6 @@ export const validateRote = (
 
   if (!castCount) {
     return { ok: false, error: 'Your rote needs at least one cast node.' };
-  }
-
-  // Foci port requires at least one focus in the chain
-  const castEntry = graphNodes.find(({ node }) => (node.tags & TAG_CAST) !== 0);
-  if (castEntry) {
-    const hasExtendValue = castEntry.values['in_succ'] !== undefined;
-    const hasExtendWire = graph.wires.some(
-      (wire) => wire.inNode === castEntry.id && wire.inPort === 'in_succ',
-    );
-    if (hasExtendValue || hasExtendWire) {
-      const hasFoci = [...fociNodes(graph)].some((id) => {
-        const entry = graph.nodes[id];
-        return entry !== undefined && (entry.node.tags & TAG_FOCI) !== 0;
-      });
-      if (!hasFoci) {
-        return {
-          ok: false,
-          error: `"${castEntry.node.name}" is set to cast as extended but has no foci.`,
-        };
-      }
-    }
   }
 
   const { complexity, max_complexity } = getStats(graph);
@@ -330,10 +307,8 @@ export const validateRote = (
       if (!isPortVisible(node, port.id, settings.port_counts)) {
         continue;
       }
-      // A required port has no default and is not a trigger port
-      const required =
-        (port.default_value === undefined || port.default_value === null) &&
-        (port.type & FLAG_TRIGGER) === 0;
+      // A required port is not optional and is not a trigger port
+      const required = !port.optional && (port.type & FLAG_TRIGGER) === 0;
       if (!required) {
         continue;
       }

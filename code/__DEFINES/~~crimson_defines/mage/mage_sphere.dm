@@ -8,7 +8,7 @@
 #define SPHERE_SPIRIT "spirit"
 #define SPHERE_TIME "time"
 
-// TODO: Turn this into a GLOB alist instead for better performance
+// TODO: Turn this into a GLOB alist instead
 #define ALL_SPHERES alist( \
 	SPHERE_CORRESPONDENCE = STAT_SPHERE_CORRESPONDENCE, \
 	SPHERE_ENTROPY = STAT_SPHERE_ENTROPY, \

@@ -20,6 +20,6 @@
 	return TRUE
 
 /datum/magick_focus/verbal/vow_spirit
-	name = "Verbal Action - Vow (Spirit)"
+	name = "Verbal Action: Vow (Spirit)"
 	paradigms = PARADIGM_MYSTIC | PARADIGM_ANIMIST
 	desc = "Make a vow with a spirit."

@@ -15,77 +15,113 @@
 	name = !isnull(name) ? name : focus.name
 	desc = !isnull(desc) ? desc : focus.desc
 
-// TODO: -1 difficulty if instrument's assigned sphere is the dominant sphere of this rote
-/datum/rote_node/focus/pre_cast(datum/magick_context/context)
+// Called when using the foci is interrupted
+// elapsed and total are in deciseconds
+/datum/rote_node/focus/proc/on_interrupted(datum/magick_context/context, elapsed, total)
+	return
+
+/datum/rote_node/focus/proc/valid(datum/magick_context/context)
+	return context.status == ROTE_NOT_INTERRUPTED && focus.can_use(context.caster)
+
+// perform the focus's action
+/datum/rote_node/focus/proc/perform(datum/magick_context/context)
+	return
+
+// TODO: Handle vulgar and witnessed difficulty
+/datum/rote_node/focus/execute(datum/magick_context/context)
 	SHOULD_NOT_OVERRIDE(TRUE)
-	context.foci_cast = TRUE
+	if (context.has_consumed_successes)
+		return
 
 	var/mob/living/caster = context.caster
 	if (!caster)
 		return
 
+	var/datum/splat/mage/mage_splat = context.mage_splat
+	if (!mage_splat)
+		return
+
+	if (!focus)
+		return
+
 	var/has_instrument = focus.can_use(caster)
-	var/timed_action_flags = focus.get_action_flags(caster)
-	var/list/discarded_instruments = MAGE_GET_DISCARDED_INSTRUMENTS(caster)
-	var/list/instruments = MAGE_GET_INSTRUMENTS(caster)
+	var/alist/instruments = MAGE_GET_INSTRUMENTS(caster)
 	var/focus_path = "[focus.type]"
-	var/discarded = (focus_path in discarded_instruments)
-	var/is_standard_instrument = FALSE
-	for (var/sphere in instruments)
-		if (instruments[sphere] == focus_path)
-			is_standard_instrument = TRUE
-			break
+	var/discarded = (focus_path in MAGE_GET_DISCARDED_INSTRUMENTS(caster))
+
+	// Highest sphere used by the rote
+	var/highest_level = mage_splat.active_rote?.highest_sphere || 0
+	var/highest_sphere
+	var/alist/rote_spheres = mage_splat.active_rote?.spheres
+	if (rote_spheres)
+		for (var/sphere as anything in rote_spheres)
+			if (rote_spheres[sphere] == highest_level)
+				highest_sphere = sphere
+				break
+
+	var/matches_highest_sphere = highest_sphere != null && instruments?[highest_sphere] == focus_path
 
 	if (!has_instrument && !discarded)
 		to_chat(caster, span_warning("You attempt to cast with a missing instrument."))
 
-	// Use precast_time only when this node type is first traversed
-	// For now, TODO: Make regular/extended casting more obvious in builder
-	var/cast_delay = ROTE_NODE_TYPE_VISITED(context, type) ? focus.cast_time : focus.precast_time
-	if (cast_delay)
-		var/datum/callback/extra_checks = CALLBACK(src, PROC_REF(still_valid), context)
+	if (focus.cast_time)
+		var/datum/callback/extra_checks = CALLBACK(src, PROC_REF(valid), context)
 		var/cast_start = world.time
-		if (!do_after(caster, cast_delay, caster, timed_action_flags = timed_action_flags, extra_checks = extra_checks))
-			// Canceled by the caster
-			if (context.aborted)
-				return
-			if (context.interrupted)
+		if (!do_after(caster, focus.cast_time, caster, timed_action_flags = focus.get_action_flags(caster), extra_checks = extra_checks))
+			if (context.status != ROTE_NOT_INTERRUPTED)
 				return
 			// Interrupted externally
-			on_interrupted(context, world.time - cast_start, cast_delay)
+			on_interrupted(context, world.time - cast_start, focus.cast_time)
 			to_chat(caster, span_warning("You were interrupted."))
-			context.interrupted = TRUE
+			context.status = ROTE_INTERRUPT_DISRUPTED
 			return
 		has_instrument = focus.can_use(caster)
 
-	if (discarded)
-		if (has_instrument && !context.discarded_instrument_bonus)
-			context.discarded_instrument_bonus = TRUE
-			if (context.debug)
-				to_chat(caster, span_warning("DEBUG: [name] discarded instrument reduces difficulty by [MAGICK_DIFF_DISCARDED_INSTRUMENT]."))
-		return
-
-	if (is_standard_instrument && has_instrument)
-		return
-
-	if (!has_instrument)
-		MAGICK_APPLY_INSTRUMENT_PENALTY(context, MAGICK_DIFF_NO_INSTRUMENT)
+	// Accumulate difficulty modifiers from how the instrument is being used
+	if (discarded && has_instrument)
+		context.difficulty_mods[DIFFICULTY_TYPE_INSTRUMENT_DISCARDED] = MAGICK_DIFF_DISCARDED_INSTRUMENT
 		if (context.debug)
-			to_chat(caster, span_warning("DEBUG: [name] missing instrument penalty [context.instrument_penalty]."))
+			to_chat(caster, span_warning("DEBUG: [name] discarded instrument reduces difficulty by [MAGICK_DIFF_DISCARDED_INSTRUMENT]."))
+	else if (!has_instrument)
+		context.difficulty_mods[DIFFICULTY_TYPE_INSTRUMENT] = MAGICK_DIFF_NO_INSTRUMENT
+		if (context.debug)
+			to_chat(caster, span_warning("DEBUG: [name] missing instrument penalty [MAGICK_DIFF_NO_INSTRUMENT]."))
 		if (caster?.st_get_stat(STAT_TEMPORARY_WILLPOWER) >= MAGICK_WILLPOWER_NO_INSTRUMENT)
 			caster.st_change_stat(STAT_TEMPORARY_WILLPOWER, -MAGICK_WILLPOWER_NO_INSTRUMENT)
 		else
 			to_chat(caster, span_warning("You lack the Willpower to cast without an instrument."))
-		return
+	else
+		context.difficulty_mods[DIFFICULTY_TYPE_INSTRUMENT] = MAGE_PARADIGM_PENALTY(focus.paradigms, mage_splat.paradigm || NONE)
+		if (context.debug)
+			to_chat(caster, span_warning("DEBUG: [name] paradigm penalty [context.difficulty_mods[DIFFICULTY_TYPE_INSTRUMENT]]."))
 
-	MAGICK_APPLY_INSTRUMENT_PENALTY(context, MAGE_PARADIGM_PENALTY(focus.paradigms, context.mage_splat?.paradigm || NONE))
-	if (context.debug)
-		to_chat(caster, span_warning("DEBUG: [name] paradigm penalty [context.instrument_penalty]."))
+	if (matches_highest_sphere)
+		context.difficulty_mods[DIFFICULTY_TYPE_INSTRUMENT_SPHERE] = MAGICK_DIFF_UNIQUE_INSTRUMENT
 
-/datum/rote_node/focus/proc/still_valid(datum/magick_context/context)
-	return !context.aborted && !context.interrupted && focus.can_use(context.caster)
+	// Perform the focus's action
+	perform(context)
 
-// Called when the cast is interrupted externally
-// elapsed and total are in deciseconds
-/datum/rote_node/focus/proc/on_interrupted(datum/magick_context/context, elapsed, total)
-	return
+	// Roll arete to gather successes
+	var/difficulty_mod = 0
+	for (var/mod_type as anything in context.difficulty_mods)
+		difficulty_mod += context.difficulty_mods[mod_type]
+	difficulty_mod = clamp(difficulty_mod, MAGICK_MAX_DIFFICULTY_BONUS, MAGICK_MAX_DIFFICULTY_PENALTY)
+
+	var/datum/storyteller_roll/arete/arete = new()
+	arete.bumper_text = name
+	arete.difficulty = highest_level + 3 + difficulty_mod
+	var/successes = arete.st_roll(caster, caster)
+
+	// Cap accumulated successes based on the ritual category
+	var/max_successes = MAGICK_MAX_SUCCESS_SPONTANEOUS
+	switch (context.ritual_category)
+		if (RITUAL_BRIEF_RITE)
+			max_successes = MAGICK_MAX_SUCCESS_BRIEF_RITE
+		if (RITUAL_CEREMONY)
+			max_successes = MAGICK_MAX_SUCCESS_CEREMONY
+		if (RITUAL_GREAT_WORK)
+			max_successes = MAGICK_MAX_SUCCESS_GREAT_WORK
+	context.successes = min((context.successes || 0) + successes, max_successes)
+	context.current_scope.successes = context.successes
+
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)

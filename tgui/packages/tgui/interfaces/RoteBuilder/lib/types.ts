@@ -29,6 +29,7 @@ export type PortData = {
   type: number;
   desc?: string;
   default_value?: number | string;
+  optional?: boolean;
   promise?: string;
   min_clamp?: number;
   max_clamp?: number;

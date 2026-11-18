@@ -10,17 +10,27 @@ export type NodeInfoNotice = {
 
 type Props = {
   name?: string;
+  complexity?: string;
   desc?: string;
   notices: NodeInfoNotice[];
   [key: string]: unknown;
 };
 
 export const NodeInfo = (props: Props) => {
-  const { name, desc, notices, ...rest } = props;
+  const { name, complexity, desc, notices, ...rest } = props;
   return (
     <Box {...rest}>
       <Stack fill vertical justify="space-around">
-        {!!desc && <Stack.Item maxWidth="200px">{desc}</Stack.Item>}
+        {!!complexity && (
+          <Stack.Item maxWidth="200px" style={{ color: '#ffb84d', fontWeight: 'bold' }}>
+            {complexity}
+          </Stack.Item>
+        )}
+        {!!desc && (
+          <Stack.Item maxWidth="200px" style={{ whiteSpace: 'pre-line' }}>
+            {desc}
+          </Stack.Item>
+        )}
         <Stack.Item>
           <Stack vertical>
             {notices.map((val, index) => (

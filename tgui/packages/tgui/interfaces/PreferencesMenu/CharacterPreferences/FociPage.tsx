@@ -141,7 +141,7 @@ export function FociPage() {
         <Box color="label" textAlign="center">
           <i>
             Mystic paradigms transcend the need for 1 instrument for every dot
-            past arete 2. (Technomancers begin discarding at arete 6)
+            past arete 2. (Technomancers begin discarding at arete 6 instead)
           </i>
         </Box>
       </Stack.Item>

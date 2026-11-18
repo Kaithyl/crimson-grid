@@ -1,188 +1,7 @@
-/datum/magick_rote
-	var/name
-	var/desc
+// Helper functions
+// TODO: Move more mage defines into here?
 
-	var/datum/action/innate/rote/action
-
-	// Compressed rote json using lz-string uri-safe
-	var/rote_code
-
-	/// Effect components
-	// Root nodes of the effect tree (node_id)
-	var/list/root_nodes
-
-	// alist <node_id, alist<output_port_key, list<list(out_port_key, in_port_key, child_node_id)>>>
-	var/alist/rote_graph
-	// alist <node_id, alist<input_port_key, list<list(out_port_key, in_port_key, source_node_id)>>>
-	// Opposite directed graph, this is to avoid port key collisions and make port dir obvious
-	var/alist/rote_graph_reverse
-
-	// Per-node userdata configured in the rote builder
-	// alist <node_id, /datum/rote_node_data>
-	var/alist/node_data
-
-	/// Casting
-	// Root node ids still awaiting target selection via crosshair
-	var/list/pending_target_nodes
-	// context of current spell requiring instruments
-	var/datum/magick_context/active_context
-
-	// TODO: Make this clickable icons on the action to toggle on/off
-	var/willpower_auto_success = FALSE
-	var/quint_diff_reduction = 0
-
-	var/complexity
-	var/spheres
-
-	var/expected_success_cost = 0
-	var/expected_quint_cost = 0
-
-/datum/magick_rote/Destroy()
-	if (action)
-		action.rote = null
-		action = null
-	clear()
-	return ..()
-
-/datum/magick_rote/proc/clear()
-	root_nodes = null
-	rote_graph = null
-	rote_graph_reverse = null
-	node_data = null
-
-/datum/magick_rote/proc/Cast(mob/clicker)
-	var/datum/splat/mage/mage_splat = get_mage_splat(clicker)
-
-	if (!mage_splat)
-		return FALSE
-
-	// Auto-assign self-selecting root nodes
-	for (var/node_id as anything in root_nodes)
-		var/datum/rote_node_data/node_data_entry = node_data ? node_data[node_id] : null
-		var/datum/rote_node/root/node = node_data_entry?.node
-		if (!istype(node))
-			continue
-		var/target = node.resolve_target(clicker)
-		if (target)
-			node_data_entry.target = target
-
-	var/datum/magick_context/context = new()
-	context.caster = clicker
-	context.mage_splat = mage_splat
-	context.rote_graph = rote_graph
-	context.rote_graph_reverse = rote_graph_reverse
-	context.node_data = node_data
-	context.willpower_auto_success = willpower_auto_success
-	context.quint_diff_reduction = quint_diff_reduction
-
-	// TEMP
-	context.debug = TRUE
-
-	for (var/node_id as anything in node_data)
-		if (node_id in root_nodes)
-			continue
-		var/datum/rote_node_data/node_data_entry = node_data[node_id]
-		var/datum/rote_node/node = node_data_entry?.node
-		if (node?.can_cast_unprompted(node_data_entry))
-			root_nodes += node_id
-
-	var/list/visited = list()
-	for (var/node_id as anything in root_nodes)
-		prefill_node_ports(node_id, context, visited)
-
-	// find root nodes without parents
-	var/list/fed_roots = list()
-	for (var/source_id as anything in rote_graph)
-		var/alist/out_edges = rote_graph[source_id]
-		for (var/out_port_key as anything in out_edges)
-			for (var/list/tuple as anything in out_edges[out_port_key])
-				fed_roots[tuple[3]] = TRUE
-
-	// Lock casting to this rote until arete has been rolled
-	active_context = context
-	mage_splat.set_active_rote(src)
-	action?.build_all_button_icons(UPDATE_BUTTON_OVERLAY)
-
-	// Order root nodes so pure data nodes run first so other nodes aren't missing data inputs
-	var/list/data_roots = list()
-	var/list/trigger_roots = list()
-	for (var/node_id as anything in root_nodes)
-		if (fed_roots[node_id])
-			continue
-		var/datum/rote_node/node = context.get_node(node_id)
-		if (!node)
-			continue
-		var/has_trigger_out = FALSE
-		for (var/port_key as anything in node.outputs)
-			var/alist/port_def = node.outputs[port_key]
-			if (port_def != null && (port_def["type"] & MAGICK_DATATYPE_TRIGGER))
-				has_trigger_out = TRUE
-				break
-		if (has_trigger_out)
-			trigger_roots += node_id
-		else
-			data_roots += node_id
-
-	// cast root nodes
-	for (var/node_id as anything in data_roots + trigger_roots)
-		context.current_node_id = node_id
-		var/datum/rote_node/node = context.get_node(node_id)
-		node.__cast(context)
-		if (context.aborted || context.interrupted)
-			break
-
-	// The spell counts as cast once arete has been rolled
-	active_context = null
-	if (mage_splat.active_rote == src)
-		mage_splat.set_active_rote(null)
-	action?.build_all_button_icons(UPDATE_BUTTON_OVERLAY)
-
-	if (context.aborted || context.interrupted)
-		return FALSE
-
-/datum/magick_rote/proc/prefill_node_ports(node_id, datum/magick_context/context, list/visited)
-	PRIVATE_PROC(TRUE)
-	if (node_id in visited)
-		return
-	visited += node_id
-
-	var/datum/rote_node_data/node_data_entry = context.node_data ? context.node_data[node_id] : null
-	var/datum/rote_node/effect/effect_node = node_data_entry?.node
-	if (!effect_node)
-		return
-
-	context.current_node_id = node_id
-	var/alist/in_edges = context.rote_graph_reverse ? context.rote_graph_reverse[node_id] : null
-	var/alist/input_defs = effect_node.inputs
-	for (var/port_key as anything in input_defs)
-		if (context.get(port_key) != null)
-			continue
-		if (in_edges?[port_key])
-			continue
-		var/alist/def = input_defs[port_key]
-		var/value = node_data_entry.port_values ? node_data_entry.port_values["port_[port_key]"] : null
-		if (value != null)
-			if (def["type"] & MAGICK_DATATYPE_NUMBER)
-				context.assign(port_key, text2num(value), def["type"])
-			else
-				context.assign(port_key, value, def["type"])
-
-		// Fullfill ports with promises
-		else if (def["promise"] == "caster" && context.caster)
-			context.assign(port_key, context.caster, def["type"])
-		// TODO
-		// else if def == caster direction
-		// else if def == caster turf... etc
-
-	var/alist/effect_edges = context.rote_graph ? context.rote_graph[node_id] : null
-	if (effect_edges)
-		for (var/out_port_key as anything in effect_edges)
-			var/list/connections = effect_edges[out_port_key]
-			for (var/list/tuple as anything in connections)
-				var/child_id = tuple[3]
-				prefill_node_ports(child_id, context, visited)
-
-// Returns a tuple (built rote, optional failure message)
+// Returns a tuple (alist(rote_data), failure_message)
 /proc/compile_rote(mob/living/user, rote_rawdata)
 	RETURN_TYPE(/list)
 
@@ -196,14 +15,19 @@
 	var/list/types_by_id = list()
 	var/list/node_instances = list()
 	var/list/connected_inputs = list()
-	// "[node_id]:[port_key]" for every wired input port
+	// "[node_id]:[port_key]"
 	var/list/connected_ports = list()
-	var/list/root_nodes = list()
+	var/list/source_nodes = list()
+	var/alist/port_values = new()
+	var/list/raw_port_values = list()
 	// alist<node_id, alist<output_port_key, list<list(out_port_key, in_port_key, child_node_id)>>>
 	var/alist/rote_graph = new()
 	// alist<node_id, alist<input_port_key, list<list(out_port_key, in_port_key, source_node_id)>>>
 	var/alist/rote_graph_reverse = new()
 	var/alist/node_data = new()
+	// alist<sphere, highest level used>
+	var/alist/rote_spheres = new()
+	var/highest_sphere = 0
 	var/complexity_sum = 0
 	var/expected_success_cost = 0
 	var/expected_quint_cost = 0
@@ -250,6 +74,13 @@
 			if(sphere_index < 1 || sphere_index > length(options) || !spheres_met)
 				return list(null, "node #[node_count] (id '[id]', node '[node_def["name"]]') failed sphere requirements (sphere_index '[sphere_index]', options: [json_encode(options)])")
 
+			// calculate spheres used
+			for (var/sphere as anything in options[sphere_index])
+				var/level = options[sphere_index][sphere]
+				if (rote_spheres[sphere] == null || level > rote_spheres[sphere])
+					rote_spheres[sphere] = level
+				highest_sphere = max(highest_sphere, level)
+
 		// Resolve the node singleton
 		var/node_type = text2path(node_def["type"])
 		var/datum/rote_node/node_singleton = GLOB.rote_nodes[node_type]
@@ -260,7 +91,7 @@
 		var/datum/rote_node_data/node_data_entry = new()
 		node_data_entry.node = node_singleton
 		if(node["port_values"])
-			node_data_entry.port_values = node["port_values"]
+			raw_port_values[id] = node["port_values"]
 		if(node["userdata"])
 			var/list/userdata = node["userdata"]
 			node_data_entry.label = userdata["label"]
@@ -273,7 +104,7 @@
 
 		node_instances[id] = node_singleton
 
-		if(node_def["tags"] & MAGICK_TAG_CAST)
+		if(node_def["tags"] & MAGICK_TAG_RITUAL)
 			cast_count++
 
 		complexity_sum += node_def["complexity"]
@@ -328,12 +159,12 @@
 	for(var/id in known_ids)
 		if(connected_inputs[id])
 			continue
-		var/datum/rote_node/root_singleton = node_instances[id]
-		if(root_singleton?.can_cast_unprompted(node_data[id]))
-			root_nodes += id
+		var/datum/rote_node/source_singleton = node_instances[id]
+		if(!length(source_singleton?.required_inputs) || source_singleton?.has_required_values(raw_port_values[id]))
+			source_nodes += id
 
-	if(!length(root_nodes))
-		return list(null, "rote has no root nodes")
+	if(!length(source_nodes))
+		return list(null, "rote has no source nodes")
 
 	// Check for islands
 	for(var/id in known_ids)
@@ -341,14 +172,14 @@
 			continue
 
 		var/datum/rote_node/node_singleton = node_instances[id]
-		if(node_singleton?.can_cast_unprompted(node_data[id]))
+		if(!length(node_singleton?.required_inputs) || node_singleton?.has_required_values(raw_port_values[id]))
 			continue
 
 		var/list/node_def = types_by_id[id]
 		var/list/inputs = node_def["inputs"]
 		var/has_required_input = FALSE
 		for(var/list/input_data in inputs)
-			if(input_data["default_value"] == null)
+			if(input_data["default_value"] == null && !input_data["optional"])
 				has_required_input = TRUE
 				break
 
@@ -362,22 +193,20 @@
 		var/alist/input_defs = node_singleton?.inputs
 		if(!input_defs)
 			continue
-		var/datum/rote_node_data/node_data_entry = node_data[id]
 		for(var/port_key as anything in input_defs)
 			var/alist/port_def = input_defs[port_key]
 			if(port_def == null)
 				continue
-			// Trigger ports are activation ports and are optional
 			if(port_def["type"] & MAGICK_DATATYPE_TRIGGER)
 				continue
-			// A port with a default value (including "" for optional ports) is not required
-			if(!isnull(port_def["default_value"]))
+			// A port with a default value or marked optional is not required
+			if(!isnull(port_def["default_value"]) || port_def["optional"])
 				continue
 			// Wired
 			if(connected_ports["[id]:[port_key]"])
 				continue
 			// Player inputted value from the rote builder
-			if(node_data_entry?.port_values?["port_[port_key]"] != null)
+			if(raw_port_values[id]?["port_[port_key]"] != null)
 				continue
 			var/list/node_def = types_by_id[id]
 			return list(null, "node '[id]' ('[node_def["name"]]') is missing a required value for input '[port_def["name"]]'")
@@ -387,7 +216,7 @@
 	var/cast_id
 	for(var/id in known_ids)
 		var/list/cast_def = types_by_id[id]
-		if(cast_def["tags"] & MAGICK_TAG_CAST)
+		if(cast_def["tags"] & MAGICK_TAG_RITUAL)
 			cast_id = id
 			break
 	if(cast_id)
@@ -415,8 +244,7 @@
 
 	// Extended casting requires at least one focus in the foci chain
 	if(cast_id)
-		var/datum/rote_node_data/cast_node_data = node_data[cast_id]
-		var/has_extend_value = cast_node_data?.port_values?["port_in_succ"] != null
+		var/has_extend_value = raw_port_values[cast_id]?["port_in_succ"] != null
 		var/has_extend_connection = connected_ports["[cast_id]:in_succ"]
 		if(has_extend_value || has_extend_connection)
 			var/list/foci_queue = list()
@@ -461,12 +289,79 @@
 	if(complexity_sum > max_complexity_sum)
 		return list(null, "rote complexity [complexity_sum] exceeds the maximum complexity [max_complexity_sum]")
 
+	// Precompute the initial execution stack
+	var/list/data_roots = list()
+	var/list/trigger_roots = list()
+	for(var/id in source_nodes)
+		var/datum/rote_node/node = node_instances[id]
+		if(node?.outputs_trigger_signal)
+			trigger_roots += id
+		else
+			data_roots += id
+	var/list/execution_stack = list()
+	for(var/id in data_roots + trigger_roots)
+		execution_stack += list(ROTE_EXECUTION_DATA(id, null, 0))
+
+	// Precompute port values from user input
+	for(var/id in known_ids)
+		var/datum/rote_node/node = node_instances[id]
+		if(!node)
+			continue
+		var/alist/in_edges = rote_graph_reverse[id]
+		var/alist/raw_values = raw_port_values[id]
+		for(var/port_key as anything in node.inputs)
+			if(in_edges?[port_key])
+				continue
+			var/alist/def = node.inputs[port_key]
+			var/value = raw_values ? raw_values["port_[port_key]"] : null
+			if(value == null)
+				continue
+			if(def["type"] & MAGICK_DATATYPE_NUMBER)
+				value = text2num(value)
+			var/alist/node_values = port_values[id]
+			if(node_values == null)
+				node_values = new()
+				port_values[id] = node_values
+			node_values[port_key] = new /datum/magick_value(value, def["type"])
+
 	return list(alist(
-		"root_nodes" = root_nodes,
+		"source_nodes" = source_nodes,
+		"execution_stack" = execution_stack,
 		"rote_graph" = rote_graph,
 		"rote_graph_reverse" = rote_graph_reverse,
+		"port_values" = port_values,
 		"node_data" = node_data,
+		"spheres" = rote_spheres,
+		"highest_sphere" = highest_sphere,
 		"complexity" = complexity_sum,
 		"expected_success_cost" = expected_success_cost,
 		"expected_quint_cost" = expected_quint_cost,
 	), null)
+
+// Returns appropriate type_flag for the value
+/proc/magick_get_datatype(value)
+	if(islist(value))
+		. = MAGICK_DATATYPE_FLAG_LIST
+		// TODO: Probably needs a more robust system for enforcing or checking monotype lists
+		for(var/datum/magick_value/item in value)
+			. |= item.type_flags
+		// drop SINGLE flag
+		. &= ~MAGICK_DATATYPE_FLAG_SINGLE
+		return
+
+	if(isnum(value))
+		return MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE
+
+	if(istext(value))
+		return MAGICK_DATATYPE_STRING | MAGICK_DATATYPE_FLAG_SINGLE
+
+	if(istype(value, /turf))
+		return MAGICK_DATATYPE_TURF | MAGICK_DATATYPE_FLAG_SINGLE
+
+	if(istype(value, /obj))
+		return MAGICK_DATATYPE_OBJ | MAGICK_DATATYPE_FLAG_SINGLE
+
+	if(istype(value, /mob))
+		return MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_SINGLE
+
+	return MAGICK_DATATYPE_FLAG_SINGLE

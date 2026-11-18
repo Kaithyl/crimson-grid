@@ -9,7 +9,7 @@ import {
 
 import {
   TAG_BUFF,
-  TAG_CAST,
+  TAG_RITUAL,
   TAG_DAMAGE,
   TAG_DATA,
   TAG_DEBUFF,
@@ -24,7 +24,7 @@ type Props = {
 };
 
 const TAG_NAMES: Record<number, string> = {
-  [TAG_CAST]: 'cast',
+  [TAG_RITUAL]: 'ritual',
   [TAG_DATA]: 'data',
   [TAG_FOCI]: 'focus',
   [TAG_UTILITY]: 'utility',

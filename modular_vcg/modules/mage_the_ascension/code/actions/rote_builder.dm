@@ -133,13 +133,18 @@
 			new_rote.name = rote_name
 			new_rote.desc = rote_desc
 			new_rote.rote_code = rote_code
-			new_rote.root_nodes = rote_data["root_nodes"]
+			new_rote.spheres = rote_data["spheres"]
+			new_rote.highest_sphere = rote_data["highest_sphere"]
+			new_rote.expected_success_cost = rote_data["expected_success_cost"]
+			new_rote.expected_quint_cost = rote_data["expected_quint_cost"]
+
+			// Compiled rote data
+			new_rote.source_nodes = rote_data["source_nodes"]
 			new_rote.rote_graph = rote_data["rote_graph"]
 			new_rote.rote_graph_reverse = rote_data["rote_graph_reverse"]
 			new_rote.node_data = rote_data["node_data"]
-			new_rote.complexity = rote_data["complexity"]
-			new_rote.expected_success_cost = rote_data["expected_success_cost"]
-			new_rote.expected_quint_cost = rote_data["expected_quint_cost"]
+			new_rote.execution_stack = rote_data["execution_stack"]
+			new_rote.port_values = rote_data["port_values"]
 
 			// Replace old rote
 			var/datum/magick_rote/old_rote = mage_splat.rotes[1]

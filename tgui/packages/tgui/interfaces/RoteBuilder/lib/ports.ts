@@ -1,6 +1,6 @@
  import {
   FLAG_ANY,
-FLAG_ATOM,
+  FLAG_ATOM,
   FLAG_LIST,
   FLAG_MOB,
   FLAG_NUMBER,
@@ -39,9 +39,8 @@ export const validLink = (output: PortData, input: PortData): boolean => {
   return atomCheck && isSubset && originCheck;
 };
 export const isTriggerPort = (port: PortData) => (port.type & FLAG_TRIGGER) !== 0;
-export const isOptionalPort = (port: PortData) => port.default_value === '';
-export const isOptionalTriggerPort = (port: PortData) => isTriggerPort(port) && isOptionalPort(port);
-export const isPrimaryActivatePort = (port: PortData) => PRIMARY_ACTIVATE_KEYS.includes(port.id) && !isOptionalTriggerPort(port);
+export const isOptionalPort = (port: PortData) => !!port.optional;
+export const isPrimaryActivatePort = (port: PortData) => PRIMARY_ACTIVATE_KEYS.includes(port.id);
 export const isNumberPort = (port: PortData) => (port.type & FLAG_NUMBER) !== 0;
 export const isStringPort = (port: PortData) => (port.type & FLAG_STRING) !== 0;
 export const isListPort = (port: PortData) => (port.type & FLAG_LIST) !== 0;

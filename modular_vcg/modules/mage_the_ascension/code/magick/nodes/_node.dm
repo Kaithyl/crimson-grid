@@ -1,4 +1,4 @@
-// This holds the actual code execution per node
+// This holds the actual code execution per node and variables that should be treated as abstract static
 /datum/rote_node/
 	abstract_type = /datum/rote_node/
 
@@ -7,7 +7,6 @@
 	var/tags
 
 	// Maximum number of this subtype of node allowed in a spell
-	// Mostly to prevent lag for costly effects
 	var/max_nodes
 
 	// requires the caster to pick a target with a crosshair
@@ -19,11 +18,14 @@
 	// Sphere combinations for this node
 	var/list/spheres
 
-	// Port system for nodes
+	/*
+	 * Port system for nodes
+	 */
 	var/in_act = "in_act"
 	var/out_act = "out_act"
 
-	// alist<port_key, alist("name" = ..., "type" = ..., ...)>
+	// alist<port_key, alist("name" = ..., "type" = ..., "whitelist" = ...,
+	//		"min_clamp" = ...., "max_clamp" = ..., "default_value" = ..., "optional" = TRUE/NULL)>
 	var/alist/inputs
 	var/alist/outputs
 
@@ -31,197 +33,49 @@
 	// Port key = id_prefix + index
 	var/alist/extendable_ports
 
+	/*
+	 *	These are set upon init to prevent redundant checking during runtime
+	 */
+
+	// whether this node has a trigger output port
+	var/outputs_trigger_signal = FALSE
+
+	// input port keys that are not optional nor have a default value
+	var/list/required_inputs
+
 GLOBAL_LIST_INIT_TYPED(rote_nodes, /datum/rote_node, init_subtypes_w_path_keys(/datum/rote_node, list()))
 GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 
-// Whether this node can be cast without being activated by a parent node.
-// Any changes to this should be reflected in
-// RoteBuilder\lib\validator.ts\canCastUnprompted()
-/datum/rote_node/proc/can_cast_unprompted(datum/rote_node_data/node_data)
-	var/alist/input_defs = src.inputs
-	for (var/port_key as anything in input_defs)
-		var/alist/port_def = input_defs[port_key]
-		if (port_def == null)
+/*
+ *	Must override this to implement node functionaltiy
+ *	Use context.get_value() or context.get() to get input port vars
+ *	and context.assign() to fill output ports
+ */
+/datum/rote_node/proc/execute(datum/magick_context/context)
+	return
+
+/datum/rote_node/New()
+	. = ..()
+	required_inputs = list()
+	for (var/port_key as anything in inputs)
+		var/alist/port_def = inputs[port_key]
+		if ((!port_def) || port_def["optional"] || !isnull(port_def["default_value"]))
 			continue
-		// Optional port
-		if (port_def["default_value"] == "")
-			continue
+		required_inputs += port_key
+	for (var/port_key as anything in outputs)
+		var/alist/port_def = outputs[port_key]
+		if (port_def != null && (port_def["type"] & MAGICK_DATATYPE_TRIGGER))
+			outputs_trigger_signal = TRUE
+			break
+
+// If there are required inputs that have been filled with user values
+/datum/rote_node/proc/has_required_values(alist/port_values)
+	for (var/port_key as anything in required_inputs)
 		// Player inputted value from the rote builder
-		if (node_data?.port_values?["port_[port_key]"] != null)
+		if (port_values?["port_[port_key]"] != null)
 			continue
 		return FALSE
 	return TRUE
-
-/datum/rote_node/proc/is_ready(datum/magick_context/context)
-	var/alist/in_edges = context.rote_graph_reverse ? context.rote_graph_reverse[context.current_node_id] : null
-	var/alist/input_defs = src.inputs
-	for (var/port_key as anything in input_defs)
-		if (context.get(port_key) != null)
-			continue
-		// if not optional or optional but has wire, wait for port to be filled
-		if (in_edges?[port_key])
-			return FALSE
-	return TRUE
-
-// For handling pre and post cast
-/datum/rote_node/proc/__cast(datum/magick_context/context)
-	SHOULD_NOT_OVERRIDE(TRUE)
-	// Force stop spell if someone manages to pass the traversal limit
-	if (++context.nodes_traversed > ROTE_MAX_TRAVERSAL)
-		return
-
-	// Prevent large spell graphs from monopolizing server execution
-	if (context.nodes_traversed % ROTE_SLEEP_INTERVAL == 0)
-		sleep(0)
-
-	// Effects that require successes are skipped before the arete roll
-	if (!context.arete_locked_in && istype(src, /datum/rote_node/effect))
-		var/datum/rote_node/effect/effect_node = src
-		if (effect_node.min_success_cost > 0)
-			return
-
-	if (!(context.arete_locked_in && (tags & MAGICK_TAG_FOCI)))
-		// increase the complexity cap once per foci type
-		if ((tags & MAGICK_TAG_FOCI) && !ROTE_NODE_TYPE_VISITED(context, type))
-			var/datum/rote_node/focus/focus_node = src
-			context.complexity_cap += focus_node.complexity_cap
-
-		// count complexity for each node on first traversal
-		if (!ROTE_NODE_VISITED(context, context.current_node_id))
-			if (context.complexity > context.complexity_cap && complexity > 0)
-				context.aborted = TRUE
-				return
-			context.complexity += complexity
-
-		pre_cast(context)
-		context.visited_nodes |= context.current_node_id
-		context.visited_node_types |= type
-		if (context.aborted || context.interrupted)
-			return
-		cast(context)
-
-	if (context.debug)
-		debug_to_user(context)
-
-	post_cast(context)
-
-// Must override this for actually doing the effect
-/datum/rote_node/proc/cast(datum/magick_context/context)
-	PROTECTED_PROC(TRUE)
-	return
-
-// This will be for pre-processing data that will be used in cast
-/datum/rote_node/proc/pre_cast(datum/magick_context/context)
-	PROTECTED_PROC(TRUE)
-	return
-
-// Only override for custom handling of child nodes.
-// Uses the effect graph dictionary on the context set by the rote.
-// auto_traverse is only here to make code reuse easier for iteration/for each nodes
-/datum/rote_node/proc/post_cast(datum/magick_context/context, auto_traverse = TRUE)
-	PROTECTED_PROC(TRUE)
-	var/node_id = context.current_node_id
-	var/alist/edges = context.rote_graph[node_id]
-	if (edges == null)
-		return
-
-	var/datum/rote_node/current = context.get_node()
-	var/has_trigger_out = FALSE
-	for (var/port_key as anything in current?.outputs)
-		var/alist/trigger_port_def = current.outputs[port_key]
-		if (trigger_port_def != null && (trigger_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
-			has_trigger_out = TRUE
-			break
-
-	// Activate children by default
-	if (auto_traverse && has_trigger_out && edges[out_act] && current?.inputs?[in_act] && context.get(out_act) == null)
-		var/incoming = context.get_value(in_act)
-		if (incoming != null)
-			context.assign(out_act, incoming, MAGICK_DATATYPE_TRIGGER)
-
-	var/alist/trigger_branches = new()
-	if (has_trigger_out)
-		for (var/out_port_key as anything in edges)
-			if (context.get(out_port_key) == null)
-				continue
-			// Only trigger actual output ports
-			var/alist/out_port_def = current.outputs[out_port_key]
-			if (out_port_def == null || !(out_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
-				continue
-			var/count = 0
-			for (var/list/tuple as anything in edges[out_port_key])
-				var/in_port_key = tuple[2]
-				var/child_id = tuple[3]
-				var/datum/rote_node/child = context.get_node(child_id)
-				var/alist/child_inputs = child.inputs
-				var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
-				if (in_port_def != null && (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER))
-					count++
-			if (count)
-				trigger_branches[out_port_key] = count
-
-	// fill ports and check is_ready() after each fill
-	for (var/out_port_key as anything in edges)
-		if (context.get(out_port_key) == null)
-			continue
-
-		var/list/connections = edges[out_port_key]
-		var/remaining_successes = context.get_value(out_port_key)
-		var/remaining_branches = trigger_branches[out_port_key] || length(connections)
-
-		for (var/list/tuple as anything in connections)
-			var/in_port_key = tuple[2]
-			var/child_id = tuple[3]
-			var/datum/rote_node/child = context.get_node(child_id)
-
-			var/alist/child_inputs = child.inputs
-			var/alist/in_port_def = child_inputs ? child_inputs[in_port_key] : null
-			if (in_port_def == null)
-				remaining_branches--
-				continue
-
-			if (in_port_def["type"] & MAGICK_DATATYPE_TRIGGER && remaining_branches > 0)
-				var/successes_for_branch = max(1, round(remaining_successes / remaining_branches))
-				context.current_node_id = child_id
-				context.assign(in_port_key, successes_for_branch, MAGICK_DATATYPE_TRIGGER)
-				remaining_branches--
-
-				if (child.is_ready(context))
-					var/before = context.successes
-					child.__cast(context)
-					var/after = context.successes
-					var/consumed = before - after
-					remaining_successes = max(0, remaining_successes - consumed)
-				else
-					remaining_successes = max(0, remaining_successes - successes_for_branch)
-			else
-				var/parent_value = context.get(out_port_key)
-				context.current_node_id = child_id
-				context.assign(in_port_key, parent_value)
-				remaining_branches--
-
-				if (child.is_ready(context))
-					child.__cast(context)
-			context.current_node_id = node_id
-
-/datum/rote_node/proc/debug_to_user(datum/magick_context/context)
-	PRIVATE_PROC(TRUE)
-	to_chat(context.caster, span_info("DEBUG: --- [name] ([type]) ---"))
-	to_chat(context.caster, span_info("DEBUG: Global successes: [context.successes]"))
-	for (var/port_key as anything in inputs)
-		var/datum/magick_value/port_val = context.get(port_key)
-		var/alist/port_def = inputs[port_key]
-		if (port_val != null)
-			to_chat(context.caster, span_info("DEBUG:   input '[port_def["name"]]' = [port_val.value]"))
-		else
-			to_chat(context.caster, span_info("DEBUG:   input '[port_def["name"]]' = EMPTY"))
-	for (var/port_key as anything in outputs)
-		var/datum/magick_value/port_val = context.get(port_key)
-		var/alist/port_def = outputs[port_key]
-		if (port_val != null)
-			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = [port_val.value]"))
-		else
-			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = EMPTY"))
 
 // For UI
 /proc/init_rotebuilder_static_data()
@@ -273,6 +127,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 				"type" = def["type"],
 				"desc" = def["desc"],
 				"default_value" = def["default_value"],
+				"optional" = def["optional"],
 				"promise" = def["promise"],
 			)
 			if (def["type"] & MAGICK_DATATYPE_NUMBER)

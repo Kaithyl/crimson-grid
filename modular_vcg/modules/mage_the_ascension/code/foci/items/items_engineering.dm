@@ -2,11 +2,11 @@
 	abstract_type = /datum/magick_focus/item/engineering_tool/
 	paradigms = PARADIGM_TECHNOMANCER
 	icon = 'icons/obj/tools.dmi'
-	precast_time = 1 TURNS
+	cast_time = 1 TURNS
 
 // Screwdriver
 /datum/magick_focus/item/engineering_tool/screwdriver/
-	name = "Item - Screwdriver"
+	name = "Item: Screwdriver"
 	item_type = /obj/item/screwdriver
 	icon_state = "screwdriver_brass"
 	//icon_state = "screwdriver" // this is temp, the handle and tip icons are separated
@@ -15,7 +15,7 @@
 
 // Wrench
 /datum/magick_focus/item/engineering_tool/wrench/
-	name = "Item - Wrench"
+	name = "Item: Wrench"
 	item_type = /obj/item/wrench
 	icon_state = "wrench"
 	start_public_sound = 'sound/items/tools/ratchet.ogg'
@@ -24,7 +24,7 @@
 
 // Welding Tool
 /datum/magick_focus/item/engineering_tool/weldingtool/
-	name = "Item - Welding Tool"
+	name = "Item: Welding Tool"
 	item_type = /obj/item/weldingtool
 	icon_state = "welder"
 	start_public_sound = 'sound/items/tools/welder.ogg'
@@ -32,7 +32,7 @@
 
 // Crowbar
 /datum/magick_focus/item/engineering_tool/crowbar/
-	name = "Item - Crowbar"
+	name = "Item: Crowbar"
 	item_type = /obj/item/crowbar
 	icon_state = "crowbar"
 	start_public_sound = 'sound/items/tools/crowbar.ogg'
@@ -40,7 +40,7 @@
 
 // Wirecutters
 /datum/magick_focus/item/engineering_tool/wirecutters/
-	name = "Item - Wirecutters"
+	name = "Item: Wirecutters"
 	item_type = /obj/item/wirecutters
 	icon_state = "cutters"
 	start_public_sound = 'sound/items/tools/wirecutter.ogg'
@@ -49,7 +49,7 @@
 
 // Multitool
 /datum/magick_focus/item/engineering_tool/multitool/
-	name = "Item - Multitool"
+	name = "Item: Multitool"
 	item_type = /obj/item/multitool
 	icon = 'icons/obj/devices/tool.dmi'
 	icon_state = "multitool"

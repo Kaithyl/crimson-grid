@@ -13,7 +13,7 @@ import {
 
 import { resolveAsset } from '../../../../assets';
 import { type Connection, Connections } from '../../../common/Connections';
-import { GRID_TILE, MOUSE_BUTTON_LEFT, WIRE_COLOR, WIRE_WIDTH } from '../constants';
+import { GRID_TILE, MOUSE_BUTTON_LEFT, TAG_FOCI, WIRE_COLOR, WIRE_WIDTH } from '../constants';
 import { type GraphAction, linkedSlots, type RoteGraph, wireBetween } from '../graph';
 import { portSlot } from '../ports';
 import type { Viewport } from '../hooks/useViewport';
@@ -36,6 +36,7 @@ type Props = {
   highlightedNodes?: ReadonlySet<string>;
   // Don't use shortcuts while another menu like settings is open
   shortcutsEnabled: boolean;
+  debug?: boolean;
   onOpenSettings: (nodeId: string) => void;
 };
 
@@ -63,6 +64,7 @@ export const RoteCanvas = (props: Props) => {
     includeStranded,
     highlightedNodes,
     shortcutsEnabled,
+    debug,
     onOpenSettings,
   } = props;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -269,6 +271,7 @@ export const RoteCanvas = (props: Props) => {
             highlighted={highlightedNodes?.has(id)}
             issues={nodeIssues.get(id)}
             readOnly={readOnly}
+            debug={debug}
             onNodeMouseDown={handleNodeMouseDown}
             onPortMouseDown={wiring.onPortMouseDown}
             onPortMouseUp={wiring.onPortMouseUp}
@@ -303,6 +306,14 @@ export const RoteCanvas = (props: Props) => {
                   ? 'triangle-exclamation'
                   : 'circle-info',
           }));
+          const complexityText = (() => {
+            if ((entry.node.tags & TAG_FOCI) !== 0) {
+              const cap = entry.node.complexity_cap ?? 0;
+              return cap > 0 ? `Max Complexity: +${cap}` : '';
+            }
+            const cost = entry.node.complexity ?? 0;
+            return cost > 0 ? `Complexity: +${cost}` : '';
+          })();
           return (
             <div
               ref={panelRef}
@@ -316,8 +327,9 @@ export const RoteCanvas = (props: Props) => {
               <NodeInfo
                 className="CircuitInfo__Examined"
                 name={entry.node.name}
+                complexity={complexityText}
                 // DO NOT DELETE
-                // desc={entry.node.desc}
+                desc={entry.node.desc}
                 notices={notices}
               />
             </div>

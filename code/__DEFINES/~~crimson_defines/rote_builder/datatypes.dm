@@ -31,30 +31,3 @@
 			) \
 		) \
 )
-
-/proc/magick_get_datatype(value)
-	if(islist(value))
-		. = MAGICK_DATATYPE_FLAG_LIST
-		// TODO: Probably needs a more robust system for enforcing or checking monotypes
-		for(var/datum/magick_value/item in value)
-			. |= item.type_flags
-		// drop SINGLE flag
-		. &= ~MAGICK_DATATYPE_FLAG_SINGLE
-		return
-
-	if(isnum(value))
-		return MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE
-
-	if(istext(value))
-		return MAGICK_DATATYPE_STRING | MAGICK_DATATYPE_FLAG_SINGLE
-
-	if(istype(value, /turf))
-		return MAGICK_DATATYPE_TURF | MAGICK_DATATYPE_FLAG_SINGLE
-
-	if(istype(value, /obj))
-		return MAGICK_DATATYPE_OBJ | MAGICK_DATATYPE_FLAG_SINGLE
-
-	if(istype(value, /mob))
-		return MAGICK_DATATYPE_MOB | MAGICK_DATATYPE_FLAG_SINGLE
-
-	return MAGICK_DATATYPE_FLAG_SINGLE

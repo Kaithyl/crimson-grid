@@ -1,7 +1,21 @@
-/datum/rote_node/roll_arete
+/datum/rote_node/cast
+	name = "Cast"
+	desc = "This is required for actually casting an effect.\nCast time: Spontaneous\nSuccess cap: Unlimited"
+	tags = MAGICK_TAG_RITUAL
+	max_nodes = 1
+
+	outputs = new(
+		out_act = MAGICK_PORT_ACTIVATE
+	)
+
+/datum/rote_node/cast/execute(datum/magick_context/context)
+	context.ritual_category = RITUAL_BRIEF_RITE
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
+
+/*/datum/rote_node/roll_arete
 	name = "Cast"
 	desc = "This is required for actually casting a spell and when arete is rolled."
-	tags = MAGICK_TAG_CAST
+	tags = MAGICK_TAG_RITUAL
 
 	max_nodes = 1
 
@@ -11,14 +25,14 @@
 	var/out_act_cast = "out_act_cast"
 
 	inputs = new(
-		in_act = MAGICK_PORT_ACTIVATE_root,
+		in_act = MAGICK_PORT_ACTIVATE,
 		in_succ = alist(
 			"name" = "Extend To",
 			"type" = MAGICK_DATATYPE_NUMBER,
 			// M20 p.150
 			"desc" = "Leave blank for instant cast. Otherwise, will continue using instruments \
 						until successes are reached, capped by arete * willpower, limited to stamina + willpower rolls.",
-			"default_value" = "",
+			"optional" = TRUE,
 		)
 	)
 	outputs = new(
@@ -26,7 +40,7 @@
 		out_act_cast = alist("name" = "Cast", "type" = MAGICK_DATATYPE_TRIGGER)
 	)
 
-/datum/rote_node/roll_arete/cast(datum/magick_context/context)
+/datum/rote_node/roll_arete/execute(datum/magick_context/context)
 	if (context.arete_locked_in)
 		return
 
@@ -96,15 +110,15 @@
 		cast_foci(context)
 
 		// Canceled by the caster
-		if (context.aborted)
+		if (context.status == ROTE_INTERRUPT_CANCEL)
 			return
 		// Interrupted externally
-		if (context.interrupted)
+		if (context.status != ROTE_NOT_INTERRUPTED)
 			break
 
 		if (!context.foci_cast)
 			to_chat(caster, span_warning("You cannot sustain an extended effect without specifying an instrument."))
-			context.interrupted = TRUE
+			context.status = ROTE_INTERRUPT_DISRUPTED
 			break
 
 	var/datum/magick_rote/active_rote = mage_splat.active_rote
@@ -113,28 +127,14 @@
 		mage_splat.set_active_rote(null)
 		active_rote.action?.build_all_button_icons(UPDATE_BUTTON_OVERLAY)
 
-	context.interrupted = FALSE
+	context.status = ROTE_NOT_INTERRUPTED
 	context.arete_locked_in = TRUE
 	context.successes = total_successes
-	context.assign(out_act_cast, total_successes, MAGICK_DATATYPE_TRIGGER)
+	// Successes are carried to child nodes by the execution scope
+	context.current_scope.successes = total_successes
+	context.assign(out_act_cast, TRUE, MAGICK_DATATYPE_TRIGGER)
 
 /datum/rote_node/roll_arete/proc/cast_foci(datum/magick_context/context)
 	PRIVATE_PROC(TRUE)
-	var/node_id = context.current_node_id
-	var/alist/edges = context.rote_graph ? context.rote_graph[node_id] : null
-	if (!edges || !edges[out_act_foci])
-		return
-
-	for (var/list/tuple as anything in edges[out_act_foci])
-		var/in_port_key = tuple[2]
-		var/child_id = tuple[3]
-		var/datum/rote_node/child = context.get_node(child_id)
-		if (!child)
-			continue
-		context.current_node_id = child_id
-		context.assign(in_port_key, 1, MAGICK_DATATYPE_TRIGGER)
-		if (child.is_ready(context))
-			child.__cast(context)
-		context.current_node_id = node_id
-		if (context.aborted || context.interrupted)
-			return
+	context.assign(out_act_foci, TRUE, MAGICK_DATATYPE_TRIGGER)
+*/

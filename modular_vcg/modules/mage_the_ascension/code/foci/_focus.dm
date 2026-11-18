@@ -7,7 +7,7 @@
 	var/desc
 
 	// Flags for actions allowed during casting that won't interupt
-	VAR_PROTECTED/timed_action_flags = 0
+	VAR_PROTECTED/timed_action_flags = NONE
 
 	// Valid paradigms associated with this tool
 	var/paradigms
@@ -23,9 +23,7 @@
 	var/start_public_sound
 	var/finish_public_sound
 
-	// if the initial cast requires cast time
-	var/precast_time
-	// cast time for extended effects
+	// how long it takes to perform this foci
 	var/cast_time
 	// how many effects this focus can support
 	var/complexity

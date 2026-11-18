@@ -1,5 +1,5 @@
-import { CAST_FOCI_PORT, CAST_OUT_PORT, TAG_CAST, TAG_FOCI } from './constants';
-import { hiddenPortIds, type PortHandle, portSlot } from './ports';
+import { FLAG_TRIGGER, TAG_RITUAL, TAG_FOCI } from './constants';
+import { findPort, hiddenPortIds, type PortHandle, portSlot } from './ports';
 import type { NodeData, NodeSettings, Position } from './types';
 
 export type RoteNode = {
@@ -211,59 +211,69 @@ export const graphReducer = (state: RoteGraph, action: GraphAction): RoteGraph =
   }
 };
 
-const castNodeId = (graph: RoteGraph): string | undefined =>
-  graph.order.find((id) => (graph.nodes[id].node.tags & TAG_CAST) !== 0);
+const rootNodeId = (graph: RoteGraph): string | undefined =>
+  graph.order.find((id) => (graph.nodes[id].node.tags & TAG_RITUAL) !== 0);
 
-// Returns all nodes after a cast node
-const downstreamOfPort = (graph: RoteGraph, port: string): Set<string> => {
-  const result = new Set<string>();
-  const castId = castNodeId(graph);
+// Ordered node ids in the execution chain
+export const executionChain = (graph: RoteGraph): string[] => {
+  const castId = rootNodeId(graph);
   if (!castId) {
-    return result;
+    return [];
   }
-  const queue: string[] = [];
-  for (const wire of graph.wires) {
-    if (wire.outNode === castId && wire.outPort === port) {
-      queue.push(wire.inNode);
-    }
-  }
+  const order: string[] = [];
+  const visited = new Set<string>();
+  const queue: string[] = [castId];
   while (queue.length) {
     const id = queue.shift() as string;
-    if (result.has(id)) {
+    if (visited.has(id)) {
       continue;
     }
-    result.add(id);
+    visited.add(id);
+    order.push(id);
     for (const wire of graph.wires) {
-      if (wire.outNode === id) {
+      if (wire.outNode !== id) {
+        continue;
+      }
+      const outPort = findPort(graph.nodes[id].node, 'out', wire.outPort);
+      if (outPort && (outPort.type & FLAG_TRIGGER) !== 0) {
         queue.push(wire.inNode);
       }
     }
   }
-  return result;
+  return order;
 };
 
-// Foci after the arete roll are skipped during casting and provide no complexity cap.
+// Instruments that come after a node requiring successes are skipped and
+// provide no complexity cap.
 export const skippedFoci = (graph: RoteGraph): Set<string> => {
   const skipped = new Set<string>();
-  for (const id of downstreamOfPort(graph, CAST_OUT_PORT)) {
+  let seenSuccess = false;
+  for (const id of executionChain(graph)) {
     const entry = graph.nodes[id];
-    if (entry && (entry.node.tags & TAG_FOCI) !== 0) {
+    if (!entry) {
+      continue;
+    }
+    if ((entry.node.min_success_cost ?? 0) > 0) {
+      seenSuccess = true;
+    } else if (seenSuccess && (entry.node.tags & TAG_FOCI) !== 0) {
       skipped.add(id);
     }
   }
   return skipped;
 };
 
-// Nodes in the foci cast
-export const fociNodes = (graph: RoteGraph): Set<string> =>
-  downstreamOfPort(graph, CAST_FOCI_PORT);
-
-// Nodes that are skipped during casting
-export const skippedNodes = (graph: RoteGraph): Set<string> => {
-  const skipped = skippedFoci(graph);
-  for (const id of fociNodes(graph)) {
+// Nodes requiring successes that come before any instrument are skipped.
+export const skippedEffects = (graph: RoteGraph): Set<string> => {
+  const skipped = new Set<string>();
+  let seenInstrument = false;
+  for (const id of executionChain(graph)) {
     const entry = graph.nodes[id];
-    if (entry && (entry.node.min_success_cost ?? 0) > 0) {
+    if (!entry) {
+      continue;
+    }
+    if ((entry.node.tags & TAG_FOCI) !== 0) {
+      seenInstrument = true;
+    } else if (!seenInstrument && (entry.node.min_success_cost ?? 0) > 0) {
       skipped.add(id);
     }
   }

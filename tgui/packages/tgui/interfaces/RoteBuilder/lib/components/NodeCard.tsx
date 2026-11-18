@@ -11,7 +11,6 @@ import {
 import { Icon } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
-import { TAG_FOCI } from '../constants';
 import type { RoteNode } from '../graph';
 import type { PortMouseHandler } from '../hooks/useWiring';
 import {
@@ -38,6 +37,7 @@ type Props = {
   issues?: NodeIssue[];
   readOnly?: boolean;
   preview?: boolean;
+  debug?: boolean;
   style?: CSSProperties;
   onNodeMouseDown?: (id: string, e: ReactMouseEvent) => void;
   onPortMouseDown?: PortMouseHandler;
@@ -69,6 +69,7 @@ export const NodeCard = memo((props: Props) => {
     issues,
     readOnly,
     preview,
+    debug,
     style,
     onNodeMouseDown,
     onPortMouseDown,
@@ -137,6 +138,7 @@ export const NodeCard = memo((props: Props) => {
         linked={linked.has(slot)}
         invalid={!!pending && !samePort(pending, handle) && !canLink(pending, handle)}
         readOnly={!!readOnly || !!preview}
+        debug={debug}
         onMouseDown={onPortMouseDown}
         onMouseUp={onPortMouseUp}
         onContextMenu={onPortRightClick}
@@ -217,27 +219,10 @@ export const NodeCard = memo((props: Props) => {
 
   const inputs = portsOf(nodeData, 'in').filter(visible);
   const outputs = portsOf(nodeData, 'out').filter(visible);
-  const desc = String(nodeData.desc ?? '').trim();
 
-  const level: 'error' | 'warning' | 'skipped' | null = issues?.some(
-    (issue) => issue.severity === 'error',
-  )
-    ? 'error'
-    : issues?.some((issue) => issue.severity === 'warning')
-      ? 'warning'
-      : issues?.some((issue) => issue.severity === 'skipped')
-        ? 'skipped'
-        : null;
-
-  // Node description for complexity vars
-  const complexityText = (() => {
-    if ((nodeData.tags & TAG_FOCI) !== 0) {
-      const cap = nodeData.complexity_cap ?? 0;
-      return cap > 0 ? `Max Complexity: +${cap}` : '';
-    }
-    const cost = nodeData.complexity ?? 0;
-    return cost > 0 ? `Complexity: +${cost}` : '';
-  })();
+  const hasError = !!issues?.some((issue) => issue.severity === 'error');
+  const hasWarning = !!issues?.some((issue) => issue.severity === 'warning');
+  const hasSkipped = !!issues?.some((issue) => issue.severity === 'skipped');
 
   return (
     <div
@@ -248,9 +233,9 @@ export const NodeCard = memo((props: Props) => {
         nodeClass(nodeData.type),
         selected && 'rote-node--selected',
         highlighted && 'rote-node--unreachable',
-        level === 'error' && 'rote-node--issue',
-        level === 'warning' && 'rote-node--warning',
-        level === 'skipped' && 'rote-node--skipped',
+        hasError && 'rote-node--issue',
+        hasWarning && !hasError && 'rote-node--warning',
+        hasSkipped && 'rote-node--skipped',
         preview && 'rote-node--preview',
       ])}
       style={preview ? style : { left: node.x, top: node.y }}
@@ -271,18 +256,16 @@ export const NodeCard = memo((props: Props) => {
             >
               ⚙
             </span>
-            {!!issues?.length && (
-              <span
-                className="rote-node__info-icon"
-                onMouseDown={stopPropagation}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExamine?.(id, e);
-                }}
-              >
-                <Icon name="info" />
-              </span>
-            )}
+            <span
+              className="rote-node__info-icon"
+              onMouseDown={stopPropagation}
+              onClick={(e) => {
+                e.stopPropagation();
+                onExamine?.(id, e);
+              }}
+            >
+              <Icon name="info" />
+            </span>
             {!readOnly && !preview && (
               <span
                 className="rote-node__delete-icon"
@@ -303,18 +286,6 @@ export const NodeCard = memo((props: Props) => {
           <div className="rote-node__port-col rote-node__port-col--in">{renderColumn('in')}</div>
           <div className="rote-node__port-col rote-node__port-col--out">{renderColumn('out')}</div>
         </div>
-
-        {(!!complexityText || !!desc) && (
-          <div className="rote-node__tooltip">
-            {!!complexityText && (
-              <>
-                <div className="rote-node__tooltip-complexity">{complexityText}</div>
-                {!!desc && <div className="rote-node__tooltip-separator" />}
-              </>
-            )}
-            {!!desc && <div>{desc}</div>}
-          </div>
-        )}
       </div>
 
     </div>

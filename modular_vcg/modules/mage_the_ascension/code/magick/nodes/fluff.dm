@@ -7,13 +7,13 @@
 
 	inputs = alist(
 		in_act = MAGICK_PORT_ACTIVATE,
-		in_message = MAGICK_PORT_STRING_required("Text", null)
+		in_message = MAGICK_PORT_STRING_REQUIRED("Text", null)
 	)
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
 	)
 
-/datum/rote_node/say/cast(datum/magick_context/context)
+/datum/rote_node/say/execute(datum/magick_context/context)
 	var/mob/caster = context.caster
 	if (!caster)
 		return
@@ -23,3 +23,4 @@
 		return
 
 	caster.say(message)
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)

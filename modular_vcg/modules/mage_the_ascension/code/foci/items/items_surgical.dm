@@ -4,11 +4,11 @@
 	abstract_type = /datum/magick_focus/item/surgical_tool/
 	paradigms = PARADIGM_TECHNOMANCER
 	icon = 'icons/obj/medical/surgery_tools.dmi'
-	precast_time = 1 TURNS
+	cast_time = 1 TURNS
 
 // Scalpel
 /datum/magick_focus/item/surgical_tool/scalpel/
-	name = "Item - Scalpel"
+	name = "Item: Scalpel"
 	item_type = /obj/item/scalpel
 	icon_state = "scalpel"
 	start_public_sound = 'sound/items/handling/surgery/scalpel1.ogg'
@@ -17,7 +17,7 @@
 
 // Retractor
 /datum/magick_focus/item/surgical_tool/retractor/
-	name = "Item - Retractor"
+	name = "Item: Retractor"
 	item_type = /obj/item/retractor
 	icon_state = "retractor"
 	start_public_sound = 'sound/items/handling/surgery/retractor1.ogg'
@@ -27,7 +27,7 @@
 
 // Hemostat
 /datum/magick_focus/item/surgical_tool/hemostat/
-	name = "Item - Hemostat"
+	name = "Item: Hemostat"
 	item_type = /obj/item/hemostat
 	icon_state = "hemostat"
 	start_public_sound = 'sound/items/handling/surgery/hemostat1.ogg'
@@ -35,7 +35,7 @@
 
 // Cautery
 /datum/magick_focus/item/surgical_tool/cautery/
-	name = "Item - Cautery"
+	name = "Item: Cautery"
 	item_type = /obj/item/cautery
 	icon_state = "cautery"
 	start_public_sound = 'sound/items/handling/surgery/cautery1.ogg'
@@ -44,7 +44,7 @@
 
 // Circular Saw
 /datum/magick_focus/item/surgical_tool/circular_saw/
-	name = "Item - Circular Saw"
+	name = "Item: Circular Saw"
 	item_type = /obj/item/circular_saw
 	icon_state = "saw"
 	start_public_sound = 'sound/items/handling/surgery/saw.ogg'
@@ -53,7 +53,7 @@
 
 // Surgical Drill
 /datum/magick_focus/item/surgical_tool/surgicaldrill/
-	name = "Item - Surgical Drill"
+	name = "Item: Surgical Drill"
 	item_type = /obj/item/surgicaldrill
 	icon_state = "drill"
 	start_public_sound = 'sound/items/tools/drill_use.ogg'
@@ -61,7 +61,7 @@
 
 // Blood Filter
 /datum/magick_focus/item/surgical_tool/blood_filter/
-	name = "Item - Blood Filter"
+	name = "Item: Blood Filter"
 	item_type = /obj/item/blood_filter
 	icon_state = "bloodfilter"
 	start_public_sound = 'sound/machines/card_slide.ogg'

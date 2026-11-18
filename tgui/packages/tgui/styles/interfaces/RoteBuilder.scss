@@ -13,8 +13,6 @@ $socket: 16px;
 $port-gap: 5px;
 $port-label-gap: 6px;
 
-$tooltip-gap: 6px;
-
 // Distance from a port row's edge to the centre of the node border
 $socket-edge: $node-pad-x + $node-border * 0.5 + $socket * 0.5;
 
@@ -218,9 +216,21 @@ $color-port-invalid: #555;
 }
 
 .rote-node--skipped {
-  opacity: 0.55;
+  background: rgba(20, 20, 20, 0.5);
   border-color: #6b6b6b;
+}
+
+.rote-node--skipped > * {
+  opacity: 0.55;
   filter: grayscale(0.7);
+}
+
+.rote-node--skipped.rote-node--issue {
+  box-shadow: 0 0 0 2px #ff4d4d;
+}
+
+.rote-node--skipped.rote-node--warning {
+  box-shadow: 0 0 0 2px #e0b341;
 }
 
 @keyframes rote-node-unreachable-pulse {
@@ -301,8 +311,8 @@ $color-port-invalid: #555;
   background: #8a1f2d;
 }
 
-.rote-node__info-icon {
-  color: #ffb84d;
+.rote-node--issue .rote-node__info-icon {
+  color: #ff4d4d;
 }
 
 .rote-node__label {
@@ -322,52 +332,6 @@ $color-port-invalid: #555;
   display: none;
 }
 
-
-/* Node tooltip */
-.rote-node__tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + #{$node-border + $tooltip-gap});
-  transform: translateX(-50%);
-  z-index: 100;
-
-  width: max-content;
-  max-width: 260px;
-  padding: 8px 10px;
-
-  background: rgba(15, 10, 20, 0.97);
-  color: #eee;
-  border: 1px solid $color-border;
-  border-radius: 5px;
-
-  font-size: 11px;
-  font-style: normal;
-  line-height: 1.35;
-  white-space: normal;
-
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 120ms ease,
-    visibility 120ms ease;
-}
-
-.rote-node:not(.rote-node--preview):hover .rote-node__tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-.rote-node__tooltip-complexity {
-  color: #ffb84d;
-  font-weight: bold;
-}
-
-.rote-node__tooltip-separator {
-  height: 1px;
-  margin: 6px 0;
-  background: rgba(255, 255, 255, 0.2);
-}
 
 // Ports
 
@@ -681,48 +645,6 @@ $color-port-invalid: #555;
     -webkit-appearance: none;
     margin: 0;
   }
-}
-
-/* Port tooltip */
-.rote-port__tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 4px);
-  transform: translateX(-50%);
-  // Above the node tooltip so port descriptions win when both are shown
-  z-index: 200;
-
-  width: max-content;
-  max-width: 220px;
-  padding: 6px 8px;
-
-  background: rgba(15, 10, 20, 0.97);
-  color: #ccc;
-  border: 1px solid $color-border;
-  border-radius: 4px;
-
-  font-size: 10px;
-  line-height: 1.3;
-  white-space: normal;
-  text-align: left;
-
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 100ms ease,
-    visibility 100ms ease;
-}
-
-.rote-node__port-label:hover .rote-port__tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-// Hide the node description while a port description is being shown
-.rote-node:has(.rote-node__port-label:hover) .rote-node__tooltip {
-  opacity: 0;
-  visibility: hidden;
 }
 
 // Save panel

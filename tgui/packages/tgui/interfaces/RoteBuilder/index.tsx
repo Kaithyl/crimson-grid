@@ -20,6 +20,8 @@ import type { RoteBuilderData } from './lib/types';
 // @ts-ignore
 import '../../styles/interfaces/RoteBuilder.scss';
 
+const DEBUG = false;
+
 export const RoteBuilder = () => {
   const { act, data } = useBackend<RoteBuilderData>();
   const editor = useRoteEditor(data, act);
@@ -57,6 +59,7 @@ export const RoteBuilder = () => {
             includeStranded={editor.compileAttempted}
             highlightedNodes={editor.highlightedNodes}
             shortcutsEnabled={!settingsNode}
+            debug={DEBUG}
             onOpenSettings={setSettingsId}
           />
 

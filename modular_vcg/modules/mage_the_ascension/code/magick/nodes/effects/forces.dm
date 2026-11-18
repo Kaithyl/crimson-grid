@@ -32,10 +32,10 @@
 		out_act = MAGICK_PORT_ACTIVATE
 	)
 
-/datum/rote_node/effect/fireball/cast(datum/magick_context/context)
+/datum/rote_node/effect/fireball/execute(datum/magick_context/context)
 
 	// Temporary - TODO: Add getting + consuming successes handling to base _effect.dm
-	var/successes = context.get_value(in_act)
+	var/successes = context.current_scope.successes
 	if (!successes || successes < min_success_cost)
 		return
 
@@ -74,6 +74,7 @@
 	projectile.exp_flash = clamp(successes, 1, 5)
 
 	projectile.fire()
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
 
 // Lightning Bolt
 
@@ -103,8 +104,8 @@
 		out_act = MAGICK_PORT_ACTIVATE
 	)
 
-/datum/rote_node/effect/lightningbolt/cast(datum/magick_context/context)
-	var/successes = context.get_value(in_act)
+/datum/rote_node/effect/lightningbolt/execute(datum/magick_context/context)
+	var/successes = context.current_scope.successes
 	if (!successes || successes < min_success_cost)
 		return
 
@@ -140,3 +141,4 @@
 		projectile.zap_flags |= ZAP_OBJ_DAMAGE
 
 	projectile.fire()
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)

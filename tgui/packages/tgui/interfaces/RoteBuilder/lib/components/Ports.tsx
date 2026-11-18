@@ -7,14 +7,19 @@ import { classes } from 'tgui-core/react';
 import type { PortMouseHandler } from '../hooks/useWiring';
 import {
   hasPromise,
-  isOptionalTriggerPort,
   isPrimaryActivatePort,
   isTriggerPort,
   type PortHandle,
   portTypeLabel,
   promiseLabel,
 } from '../ports';
+import type { PortData } from '../types';
 import { hasValueEditor, PortValueInput } from './PortValueInput';
+
+const tooltip = (port: PortData, debug?: boolean) => {
+  const desc = port.desc ?? '';
+  return debug ? `${port.name} (${port.type})\n${desc}` : desc;
+};
 
 type Props = {
   handle: PortHandle;
@@ -23,6 +28,7 @@ type Props = {
   linked: boolean;
   invalid: boolean;
   readOnly: boolean;
+  debug?: boolean;
   // Extra inline content
   extra?: ReactNode;
   onMouseDown?: PortMouseHandler;
@@ -32,12 +38,11 @@ type Props = {
 };
 
 export const Port = (props: Props) => {
-  const { handle, slot, value, linked, invalid, readOnly, extra } = props;
+  const { handle, slot, value, linked, invalid, readOnly, debug, extra } = props;
   const { onMouseDown, onMouseUp, onContextMenu, onSetValue } = props;
   const { dir, port } = handle;
   const trigger = isTriggerPort(port);
   const primaryActivate = isPrimaryActivatePort(port);
-  const optionalTrigger = isOptionalTriggerPort(port);
   const promise = hasPromise(port);
 
   const socket = (
@@ -50,7 +55,7 @@ export const Port = (props: Props) => {
         trigger && !primaryActivate && 'rote-port--activate-inline',
         invalid && 'rote-port--invalid',
       ])}
-      title={trigger ? port.name : undefined}
+      title={tooltip(port, debug)}
       onMouseDown={(e) => onMouseDown?.(handle, e)}
       onMouseUp={trigger ? (e) => onMouseUp?.(handle, e) : undefined}
       onContextMenu={(e) => onContextMenu?.(handle, e)}
@@ -64,20 +69,15 @@ export const Port = (props: Props) => {
   return (
     <div
       className={classes(['rote-node__port-label', invalid && 'rote-port--invalid'])}
-      title={`${port.name} (type ${port.type})`}
+      title={tooltip(port, debug)}
       onMouseUp={(e) => onMouseUp?.(handle, e)}
     >
       {socket}
       <div className="rote-node__port-text">
         <div className="rote-node__port-name-row">
-          <span className="rote-node__port-name">
-            {optionalTrigger ? 'Trigger' : port.name}
-          </span>
+          <span className="rote-node__port-name">{port.name}</span>
           {dir === 'in' && !trigger && promise && (
-            <span
-              className="rote-port__promise"
-              title={`Left empty, this port is guaranteed to be the ${promiseLabel(port).toLowerCase()}.`}
-            >
+            <span className="rote-port__promise">
               <Icon name="upload" className="rote-port__promise-icon" />
               <span className="rote-port__promise-label">{promiseLabel(port)}</span>
             </span>
@@ -94,7 +94,6 @@ export const Port = (props: Props) => {
         </div>
         <div className="rote-node__port-type">{portTypeLabel(port)}</div>
       </div>
-      {!!port.desc && <div className="rote-port__tooltip">{port.desc}</div>}
     </div>
   );
 };
