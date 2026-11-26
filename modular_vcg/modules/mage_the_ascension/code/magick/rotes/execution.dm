@@ -51,7 +51,7 @@
 	var/datum/magick_scope/scope = current_scope
 	while (scope)
 		var/datum/magick_value/payload = scope.port_values[node_id]?[port]
-		if (payload != null)
+		if (!isnull(payload))
 			return payload
 		scope = scope.parent
 	return null
@@ -69,7 +69,7 @@
 		if (out_def != null && (out_def["type"] & MAGICK_DATATYPE_TRIGGER))
 			continue
 		var/datum/magick_value/payload = read(node_id, out_port)
-		if (payload == null)
+		if (isnull(payload))
 			continue
 		for (var/list/tuple as anything in edges[out_port])
 			var/in_port = tuple[2]

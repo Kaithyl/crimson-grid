@@ -26,9 +26,15 @@
 
 /// Constants
 #define ROTE_NOT_INTERRUPTED 0
-#define ROTE_INTERRUPT_CANCEL 1
-#define ROTE_INTERRUPT_DISRUPTED 2
-#define ROTE_INTERRUPT_FORCE_CAST 3
+#define ROTE_AWAITING_TARGET 1
+#define ROTE_INTERRUPT_CANCEL 2
+#define ROTE_INTERRUPT_DISRUPTED 3
+#define ROTE_INTERRUPT_FORCE_CAST 4
 
 // What counts as being within LoS by SS13 standards
 #define MAGICK_LINE_OF_SIGHT_DISTANCE 7
+
+// uses BYOND dir constants (1-10)
+// 11 defaults to caster's direction
+#define MAGICK_DIRECTION_CASTER 11
+

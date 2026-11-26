@@ -2,7 +2,14 @@
 // Adapted from IntegratedCircuit/FundamentalTypes.jsx + BasicInput.jsx
 import { type KeyboardEvent, type SyntheticEvent, useEffect, useState } from 'react';
 
-import { hasWhitelist, isListPort, isNumberPort, isStringPort, isTriggerPort } from '../ports';
+import {
+  hasWhitelist,
+  isListPort,
+  isNumberPort,
+  isStringPort,
+  isTriggerPort,
+  whitelistEntries,
+} from '../ports';
 import type { PortData } from '../types';
 
 type Props = {
@@ -14,7 +21,10 @@ type Props = {
 };
 
 export const hasValueEditor = (port: PortData) =>
-  !isTriggerPort(port) && !isListPort(port) && (isNumberPort(port) || isStringPort(port));
+  !!port.manual &&
+  !isTriggerPort(port) &&
+  !isListPort(port) &&
+  (isNumberPort(port) || isStringPort(port));
 
 // Keep clicks in the field from dragging the node or panning the plane
 const stopPropagation = (e: SyntheticEvent) => e.stopPropagation();
@@ -35,6 +45,27 @@ const clampToPort = (port: PortData, n: number) => {
 export const PortValueInput = ({ port, value, disabled, onCommit }: Props) => {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
+
+  if (hasWhitelist(port)) {
+    const hasDefault = port.default_value !== null && port.default_value !== undefined;
+    const shownValue = value === '' && hasDefault ? String(port.default_value) : value;
+    return (
+      <select
+        className="rote-port__whitelist"
+        value={shownValue}
+        disabled={disabled}
+        onMouseDown={stopPropagation}
+        onChange={(e) => onCommit(e.target.value || null)}
+      >
+        <option value="">—</option>
+        {whitelistEntries(port).map((entry) => (
+          <option key={entry.label} value={entry.value}>
+            {entry.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
 
   // String ports take priority
   if (isNumberPort(port) && !isStringPort(port)) {
@@ -69,25 +100,6 @@ export const PortValueInput = ({ port, value, disabled, onCommit }: Props) => {
         onBlur={commit}
         onKeyDown={blurOnEnter}
       />
-    );
-  }
-
-  if (hasWhitelist(port)) {
-    return (
-      <select
-        className="rote-port__whitelist"
-        value={value}
-        disabled={disabled}
-        onMouseDown={stopPropagation}
-        onChange={(e) => onCommit(e.target.value || null)}
-      >
-        <option value="">—</option>
-        {port.whitelist!.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
     );
   }
 

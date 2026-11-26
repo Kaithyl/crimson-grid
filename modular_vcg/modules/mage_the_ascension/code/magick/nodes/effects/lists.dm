@@ -5,6 +5,7 @@
 	max_nodes = 1
 
 	var/in_targets = "in_targets"
+	var/out_act_loop = "out_act_loop"
 	var/out_target = "out_target"
 
 	inputs = new(
@@ -13,6 +14,7 @@
 	)
 	outputs = new(
 		out_act = MAGICK_PORT_ACTIVATE,
+		out_act_loop = alist("name" = "Loop", "type" = MAGICK_DATATYPE_TRIGGER),
 		out_target = MAGICK_PORT_TARGET,
 	)
 
@@ -23,8 +25,10 @@
 		// Briefly enter a new execution scope and pass port values to it
 		context.push_scope()
 		context.assign(out_target, targets[i])
-		context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
+		context.assign(out_act_loop, TRUE, MAGICK_DATATYPE_TRIGGER)
 		context.pop_scope()
+
+	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
 
 /datum/rote_node/source/lists/
 	abstract_type = /datum/rote_node/source/lists/
@@ -46,7 +50,7 @@
 		return
 
 	for(var/i = 0 to ROTE_NODE_MAX_LIST_SIZE)
-		inputs[val_id+num2text(i)] = alist("name" = val_name, "type" = val_type, "optional" = TRUE)
+		inputs[val_id+num2text(i)] = alist("name" = val_name, "type" = val_type, "optional" = TRUE, "manual" = TRUE)
 
 	extendable_ports[val_id] = alist("min" = 1, "max" = ROTE_NODE_MAX_LIST_SIZE, "default" = 3)
 

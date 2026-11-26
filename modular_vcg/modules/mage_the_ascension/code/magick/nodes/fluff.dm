@@ -7,7 +7,7 @@
 
 	inputs = alist(
 		in_act = MAGICK_PORT_ACTIVATE,
-		in_message = MAGICK_PORT_STRING_REQUIRED("Text", null)
+		in_message = MAGICK_PORT_STRING_REQUIRED("Text", null, TRUE),
 	)
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,

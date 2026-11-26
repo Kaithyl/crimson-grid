@@ -1,7 +1,66 @@
 // Helper functions
 // TODO: Move more mage defines into here?
 
+// converts PATTERN port's stored JSON into a list of [x, y] offsets relative
+// to the origin (which is always [0, 0]). The origin cell is only included if
+// it was selected. Format: {"origin": [ox, oy], "selected": [[x, y], ...]}
+/proc/parse_pattern_value(raw)
+	var/list/parsed = json_decode(raw)
+	if(!islist(parsed))
+		return list()
+	var/list/origin = parsed["origin"]
+	if(!islist(origin) || length(origin) < 2)
+		return list()
+	var/origin_x = origin[1]
+	var/origin_y = origin[2]
+	var/list/offsets = list()
+	var/list/selected = parsed["selected"]
+	if(islist(selected))
+		for(var/list/cell in selected)
+			if(!islist(cell) || length(cell) < 2)
+				continue
+			offsets += list(list(cell[1] - origin_x, origin_y - cell[2]))
+	return offsets
+
+/proc/rotate_pattern(list/offsets, direction)
+	var/angle = dir2angle(direction)
+	if(angle == null)
+		return list()
+	var/cos = cos(angle)
+	var/sin = sin(angle)
+	var/list/result = list()
+	for(var/list/offset in offsets)
+		var/x = offset[1]
+		var/y = offset[2]
+		// round(n, 1) rounds to nearest; single-arg round() floors, which turns float error like -6e-17 into -1
+		result += list(list(round(x * cos + y * sin, 1), round(-x * sin + y * cos, 1)))
+	return result
+
+/proc/prefill_ports(alist/port_values, id, port_key, alist/def, alist/raw_values)
+	var/value = raw_values ? raw_values["port_[port_key]"] : null
+	if(isnull(value))
+		value = def["default_value"]
+	// If default value is still null/not set
+	if(isnull(value))
+		return
+	if(def["type"] & MAGICK_DATATYPE_NUMBER)
+		if(istext(value))
+			value = text2num(value)
+		if(!isnum(value))
+			value = def["default_value"]
+		// If still null, return
+		if(isnull(value))
+			return
+	else if(def["type"] & MAGICK_DATATYPE_PATTERN)
+		value = parse_pattern_value(value)
+	var/alist/node_values = port_values[id]
+	if(node_values == null)
+		node_values = new()
+		port_values[id] = node_values
+	node_values[port_key] = new /datum/magick_value(value, def["type"])
+
 // Returns a tuple (alist(rote_data), failure_message)
+// TODO: This could be handled in rust-g instead
 /proc/compile_rote(mob/living/user, rote_rawdata)
 	RETURN_TYPE(/list)
 
@@ -179,7 +238,7 @@
 		var/list/inputs = node_def["inputs"]
 		var/has_required_input = FALSE
 		for(var/list/input_data in inputs)
-			if(input_data["default_value"] == null && !input_data["optional"])
+			if(isnull(input_data["default_value"]) && !input_data["optional"])
 				has_required_input = TRUE
 				break
 
@@ -206,7 +265,7 @@
 			if(connected_ports["[id]:[port_key]"])
 				continue
 			// Player inputted value from the rote builder
-			if(raw_port_values[id]?["port_[port_key]"] != null)
+			if(!isnull(raw_port_values[id]?["port_[port_key]"]))
 				continue
 			var/list/node_def = types_by_id[id]
 			return list(null, "node '[id]' ('[node_def["name"]]') is missing a required value for input '[port_def["name"]]'")
@@ -244,7 +303,7 @@
 
 	// Extended casting requires at least one focus in the foci chain
 	if(cast_id)
-		var/has_extend_value = raw_port_values[cast_id]?["port_in_succ"] != null
+		var/has_extend_value = !isnull(raw_port_values[cast_id]?["port_in_succ"])
 		var/has_extend_connection = connected_ports["[cast_id]:in_succ"]
 		if(has_extend_value || has_extend_connection)
 			var/list/foci_queue = list()
@@ -312,17 +371,12 @@
 		for(var/port_key as anything in node.inputs)
 			if(in_edges?[port_key])
 				continue
-			var/alist/def = node.inputs[port_key]
-			var/value = raw_values ? raw_values["port_[port_key]"] : null
-			if(value == null)
+			prefill_ports(port_values, id, port_key, node.inputs[port_key], raw_values)
+		for(var/port_key as anything in node.outputs)
+			var/alist/def = node.outputs[port_key]
+			if(!def?["manual"])
 				continue
-			if(def["type"] & MAGICK_DATATYPE_NUMBER)
-				value = text2num(value)
-			var/alist/node_values = port_values[id]
-			if(node_values == null)
-				node_values = new()
-				port_values[id] = node_values
-			node_values[port_key] = new /datum/magick_value(value, def["type"])
+			prefill_ports(port_values, id, port_key, def, raw_values)
 
 	return list(alist(
 		"source_nodes" = source_nodes,

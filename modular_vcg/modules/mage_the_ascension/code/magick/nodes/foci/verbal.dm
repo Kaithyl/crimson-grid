@@ -5,7 +5,7 @@
 
 	inputs = alist(
 		in_act = MAGICK_PORT_ACTIVATE,
-		in_message = MAGICK_PORT_STRING_REQUIRED("Text", null)
+		in_message = MAGICK_PORT_STRING_REQUIRED("Text", null, TRUE)
 	)
 	outputs = alist(
 		out_act = MAGICK_PORT_ACTIVATE,
@@ -40,4 +40,5 @@
 
 /datum/rote_node/focus/verbal/vow_spirit
 	focus_type = /datum/magick_focus/verbal/vow_spirit
-	complexity_cap = 3
+	complexity_cap = 10
+	//complexity_cap = 3

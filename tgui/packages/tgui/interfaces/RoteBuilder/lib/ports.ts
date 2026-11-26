@@ -1,17 +1,18 @@
  import {
-  FLAG_ANY,
-  FLAG_ATOM,
-  FLAG_LIST,
-  FLAG_MOB,
-  FLAG_NUMBER,
-  FLAG_OBJ,
-  FLAG_ORIGIN,
-  FLAG_STRING,
-  FLAG_STRING_OR_NUMBER,
-  FLAG_TRIGGER,
-  FLAG_TURF,
-  PRIMARY_ACTIVATE_KEYS,
-} from './constants';
+   FLAG_ANY,
+   FLAG_ATOM,
+   FLAG_LIST,
+   FLAG_MOB,
+   FLAG_NUMBER,
+   FLAG_OBJ,
+   FLAG_ORIGIN,
+   FLAG_PATTERN,
+   FLAG_STRING,
+   FLAG_STRING_OR_NUMBER,
+   FLAG_TRIGGER,
+   FLAG_TURF,
+   PRIMARY_ACTIVATE_KEYS,
+ } from './constants';
 import type { ExtendablePortGroup, NodeData, PortData, PortDir } from './types';
 
 // Any changes to this function should be reflected in
@@ -45,7 +46,28 @@ export const isNumberPort = (port: PortData) => (port.type & FLAG_NUMBER) !== 0;
 export const isStringPort = (port: PortData) => (port.type & FLAG_STRING) !== 0;
 export const isListPort = (port: PortData) => (port.type & FLAG_LIST) !== 0;
 export const isOriginPort = (port: PortData) => (port.type & FLAG_ORIGIN) !== 0;
-export const hasWhitelist = (port: PortData) => !!port.whitelist?.length;
+export const isPatternPort = (port: PortData) => (port.type & FLAG_PATTERN) !== 0;
+
+// Side length of a pattern port's square grid, defaulting to 5x5
+export const patternSize = (port: PortData) => {
+  const size = Number(port.size);
+  return Number.isFinite(size) && size > 0 ? Math.floor(size) : 5;
+};
+
+export type WhitelistEntry = { label: string; value: string };
+
+export const whitelistEntries = (port: PortData): WhitelistEntry[] => {
+  const whitelist = port.whitelist;
+  if (!whitelist) {
+    return [];
+  }
+  if (Array.isArray(whitelist)) {
+    return whitelist.map((value) => ({ label: String(value), value: String(value) }));
+  }
+  return Object.entries(whitelist).map(([label, value]) => ({ label, value: String(value) }));
+};
+
+export const hasWhitelist = (port: PortData) => whitelistEntries(port).length > 0;
 
 export const hasPromise = (port: PortData) => !!port.promise && !isStringPort(port) && !isNumberPort(port);
 
@@ -81,6 +103,9 @@ export const portTypeLabel = (port: PortData): string => {
       parts.push('obj');
     } else if (type & FLAG_MOB) {
       parts.push('mob');
+    }
+    if (type & FLAG_PATTERN) {
+      parts.push('pattern');
     }
     if (type & FLAG_ORIGIN) {
       parts.push('origin');

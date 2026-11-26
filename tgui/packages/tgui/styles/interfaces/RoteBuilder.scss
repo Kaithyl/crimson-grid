@@ -647,6 +647,70 @@ $color-port-invalid: #555;
   }
 }
 
+.rote-node__port-col--out .rote-port__value,
+.rote-node__port-col--out .rote-port__whitelist {
+  order: -1;
+}
+
+// Pattern grid editor
+
+.rote-pattern {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 1px;
+
+  padding: 2px;
+
+  background: #150d1d;
+  border: 1px solid $color-border;
+  border-radius: 3px;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+.rote-pattern__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 12px;
+  height: 12px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 1px;
+
+  font-size: 9px;
+  line-height: 1;
+  color: #fff;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
+}
+
+.rote-pattern__tile--selected {
+  background: $color-port-out;
+
+  &:hover {
+    background: #9ad0ff;
+  }
+}
+
+.rote-pattern__tile--origin {
+  color: #ffd24a;
+  font-weight: bold;
+}
+
+.rote-pattern__tile--disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.rote-node__port-col--out .rote-pattern {
+  order: -1;
+}
+
 // Save panel
 .rote-builder__save-panel {
   position: absolute;

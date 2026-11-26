@@ -24,8 +24,7 @@
 	var/in_act = "in_act"
 	var/out_act = "out_act"
 
-	// alist<port_key, alist("name" = ..., "type" = ..., "whitelist" = ...,
-	//		"min_clamp" = ...., "max_clamp" = ..., "default_value" = ..., "optional" = TRUE/NULL)>
+	// Reference defines/../rote_builder/ports.dm
 	var/alist/inputs
 	var/alist/outputs
 
@@ -72,7 +71,7 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 /datum/rote_node/proc/has_required_values(alist/port_values)
 	for (var/port_key as anything in required_inputs)
 		// Player inputted value from the rote builder
-		if (port_values?["port_[port_key]"] != null)
+		if (!isnull(port_values?["port_[port_key]"]))
 			continue
 		return FALSE
 	return TRUE
@@ -129,15 +128,15 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 				"default_value" = def["default_value"],
 				"optional" = def["optional"],
 				"promise" = def["promise"],
+				"manual" = def["manual"],
 			)
 			if (def["type"] & MAGICK_DATATYPE_NUMBER)
 				if (def["min_clamp"] != null)
 					port_data["min_clamp"] = def["min_clamp"]
 				if (def["max_clamp"] != null)
 					port_data["max_clamp"] = def["max_clamp"]
-			else if (def["type"] & MAGICK_DATATYPE_STRING)
-				if (def["whitelist"] != null)
-					port_data["whitelist"] = def["whitelist"]
+			if (def["whitelist"] != null)
+				port_data["whitelist"] = def["whitelist"]
 			UNTYPED_LIST_ADD(inputs_list, port_data)
 		for(var/port_id as anything in node.outputs)
 			var/alist/def = node.outputs[port_id]
@@ -146,7 +145,18 @@ GLOBAL_LIST_INIT(rotebuilder_static_data, init_rotebuilder_static_data())
 				"name" = def["name"],
 				"type" = def["type"],
 				"desc" = def["desc"],
+				"default_value" = def["default_value"],
+				"manual" = def["manual"],
 			)
+			if (def["type"] & MAGICK_DATATYPE_NUMBER)
+				if (def["min_clamp"] != null)
+					port_data["min_clamp"] = def["min_clamp"]
+				if (def["max_clamp"] != null)
+					port_data["max_clamp"] = def["max_clamp"]
+			if (def["whitelist"] != null)
+				port_data["whitelist"] = def["whitelist"]
+			if (def["type"] & MAGICK_DATATYPE_PATTERN)
+				port_data["size"] = def["size"]
 			UNTYPED_LIST_ADD(outputs_list, port_data)
 
 		node_data["inputs"] = inputs_list

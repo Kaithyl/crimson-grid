@@ -20,8 +20,9 @@ export const FLAG_TURF = 1 << 3;
 export const FLAG_OBJ = 1 << 4;
 export const FLAG_MOB = 1 << 5;
 export const FLAG_ATOM = FLAG_TURF | FLAG_OBJ | FLAG_MOB;
+export const FLAG_PATTERN = 1 << 6;
 
-export const FLAG_ANY = FLAG_STRING_OR_NUMBER | FLAG_ATOM;
+export const FLAG_ANY = FLAG_STRING_OR_NUMBER | FLAG_ATOM | FLAG_PATTERN;
 
 export const FLAG_ORIGIN = 1 << 21;
 export const FLAG_SINGLE = 1 << 22;

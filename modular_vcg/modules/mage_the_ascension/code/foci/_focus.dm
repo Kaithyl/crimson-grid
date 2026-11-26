@@ -23,6 +23,7 @@
 	var/start_public_sound
 	var/finish_public_sound
 
+	// TODO: Turn this into an alist for each casting type
 	// how long it takes to perform this foci
 	var/cast_time
 	// how many effects this focus can support

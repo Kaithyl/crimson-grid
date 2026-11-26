@@ -33,7 +33,9 @@ export type PortData = {
   promise?: string;
   min_clamp?: number;
   max_clamp?: number;
-  whitelist?: string[];
+  whitelist?: string[] | Record<string, string | number>;
+  manual?: boolean;
+  size?: number;
   [key: string]: unknown;
 };
 

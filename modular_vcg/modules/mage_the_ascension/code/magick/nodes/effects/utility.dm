@@ -17,7 +17,7 @@
 
 	inputs = new(
 		in_act = MAGICK_PORT_ACTIVATE,
-		in_radius = MAGICK_PORT_NUMBER_CLAMP_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5),
+		in_radius = MAGICK_PORT_NUMBER_CLAMP_("Radius", 1, MAGICK_LINE_OF_SIGHT_DISTANCE, 5, TRUE),
 		in_target = MAGICK_PORT_TARGET,
 	)
 	outputs = new(
@@ -55,14 +55,14 @@
 
 	inputs = new()
 	outputs = new(
-		out_string = MAGICK_PORT_STRING("Text", null),
+		out_string = MAGICK_PORT_STRING("Text", null, FALSE),
 	)
 	extendable_ports = new()
 
 /datum/rote_node/concact_string/New()
 	. = ..()
 	for(var/i = 0 to ROTE_NODE_MAX_LIST_SIZE)
-		inputs[in_string+num2text(i)] = MAGICK_PORT_STRING("Text", null)
+		inputs[in_string+num2text(i)] = MAGICK_PORT_STRING("Text", null, TRUE)
 
 	extendable_ports[in_string] = alist("min" = 1, "max" = ROTE_NODE_MAX_LIST_SIZE, "default" = 2)
 
@@ -108,6 +108,27 @@
 	// Only the matching branch should be signaled
 	context.assign(value_a == value_b ? out_act_true : out_act_false, TRUE, MAGICK_DATATYPE_TRIGGER)
 	context.assign(out_act, TRUE, MAGICK_DATATYPE_TRIGGER)
+
+// Get Direction
+
+/datum/rote_node/facing
+	name = "Get Direction"
+	desc = "Returns what direction input target is facing."
+	tags = MAGICK_TAG_DATA
+
+	var/in_target = "in_target"
+	var/out_dir = "out_dir"
+	inputs = new(
+		in_target = MAGICK_PORT_TARGET,
+	)
+	outputs = new(
+		out_dir = MAGICK_PORT_DIRECTION(FALSE, FALSE),
+	)
+
+/datum/rote_node/facing/execute(datum/magick_context/context)
+	var/atom/target = context.get_value(in_target)
+	var/direction = target ? target.dir : 0
+	context.assign(out_dir, direction, MAGICK_DATATYPE_NUMBER | MAGICK_DATATYPE_FLAG_SINGLE)
 
 // Count
 

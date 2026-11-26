@@ -107,8 +107,14 @@
 		difficulty_mod += context.difficulty_mods[mod_type]
 	difficulty_mod = clamp(difficulty_mod, MAGICK_MAX_DIFFICULTY_BONUS, MAGICK_MAX_DIFFICULTY_PENALTY)
 
+	if (context.debug)
+		var/mods_text = ""
+		for (var/mod_type as anything in context.difficulty_mods)
+			mods_text += "[mod_type]: [context.difficulty_mods[mod_type]]; "
+		to_chat(caster, span_warning("DEBUG: [name] difficulty_mods [mods_text]"))
+
 	var/datum/storyteller_roll/arete/arete = new()
-	arete.bumper_text = name
+	arete.bumper_text = "Arete - [mage_splat.active_rote?.name || name]"
 	arete.difficulty = highest_level + 3 + difficulty_mod
 	var/successes = arete.st_roll(caster, caster)
 
@@ -121,6 +127,8 @@
 			max_successes = MAGICK_MAX_SUCCESS_CEREMONY
 		if (RITUAL_GREAT_WORK)
 			max_successes = MAGICK_MAX_SUCCESS_GREAT_WORK
+	// If arete is somehow > cap, use arete instead
+	max_successes = max(max_successes, caster.st_get_stat(STAT_ARETE))
 	context.successes = min((context.successes || 0) + successes, max_successes)
 	context.current_scope.successes = context.successes
 

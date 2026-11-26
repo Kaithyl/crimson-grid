@@ -105,7 +105,7 @@
 		return null
 
 	var/value = payload.value
-	if (def["type"] & MAGICK_DATATYPE_NUMBER && def["type"] & MAGICK_DATATYPE_FLAG_SINGLE)
+	if (isnum(value) && def["type"] & MAGICK_DATATYPE_NUMBER && def["type"] & MAGICK_DATATYPE_FLAG_SINGLE)
 		if (def["min_clamp"] != null)
 			value = max(value, def["min_clamp"])
 		if (def["max_clamp"] != null)
@@ -113,6 +113,8 @@
 	else if (def["type"] & MAGICK_DATATYPE_STRING && def["type"] & MAGICK_DATATYPE_FLAG_SINGLE)
 		if (def["whitelist"] != null && !(value in def["whitelist"]))
 			value = ""
+	if ((payload.type_flags & MAGICK_DATATYPE_FLAG_DIRECTION) && (!value || value == MAGICK_DIRECTION_CASTER))
+		value = caster?.dir || NORTH
 	return value
 
 // assigns a value to a port on an node
@@ -165,14 +167,14 @@
 	for (var/port_key as anything in inputs)
 		var/datum/magick_value/port_val = context.get(port_key)
 		var/alist/port_def = inputs[port_key]
-		if (port_val != null)
+		if (!isnull(port_val))
 			to_chat(context.caster, span_info("DEBUG:   input '[port_def["name"]]' = [port_val.value]"))
 		else
 			to_chat(context.caster, span_info("DEBUG:   input '[port_def["name"]]' = EMPTY"))
 	for (var/port_key as anything in outputs)
 		var/datum/magick_value/port_val = context.get(port_key)
 		var/alist/port_def = outputs[port_key]
-		if (port_val != null)
+		if (!isnull(port_val))
 			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = [port_val.value]"))
 		else
 			to_chat(context.caster, span_info("DEBUG:   output '[port_def["name"]]' = EMPTY"))

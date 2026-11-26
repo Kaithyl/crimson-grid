@@ -7,6 +7,7 @@ import { classes } from 'tgui-core/react';
 import type { PortMouseHandler } from '../hooks/useWiring';
 import {
   hasPromise,
+  isPatternPort,
   isPrimaryActivatePort,
   isTriggerPort,
   type PortHandle,
@@ -14,6 +15,7 @@ import {
   promiseLabel,
 } from '../ports';
 import type { PortData } from '../types';
+import { PatternGrid } from './PatternGrid';
 import { hasValueEditor, PortValueInput } from './PortValueInput';
 
 const tooltip = (port: PortData, debug?: boolean) => {
@@ -44,6 +46,7 @@ export const Port = (props: Props) => {
   const trigger = isTriggerPort(port);
   const primaryActivate = isPrimaryActivatePort(port);
   const promise = hasPromise(port);
+  const linkedBlocked = linked && dir === 'in';
 
   const socket = (
     <span
@@ -82,11 +85,19 @@ export const Port = (props: Props) => {
               <span className="rote-port__promise-label">{promiseLabel(port)}</span>
             </span>
           )}
-          {dir === 'in' && !trigger && !promise && hasValueEditor(port) && (
+          {!trigger && !promise && isPatternPort(port) && !!port.manual && (
+            <PatternGrid
+              port={port}
+              value={linkedBlocked ? '' : value}
+              disabled={readOnly || linkedBlocked}
+              onCommit={(next) => onSetValue?.(handle.nodeId, port.id, next)}
+            />
+          )}
+          {!trigger && !promise && hasValueEditor(port) && !!port.manual && (
             <PortValueInput
               port={port}
-              value={linked ? '' : value}
-              disabled={readOnly || linked}
+              value={linkedBlocked ? '' : value}
+              disabled={readOnly || linkedBlocked}
               onCommit={(next) => onSetValue?.(handle.nodeId, port.id, next)}
             />
           )}

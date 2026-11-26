@@ -12,6 +12,8 @@
 
 	// The rote this action represents
 	var/datum/magick_rote/rote
+	// Tracks click events for special targeting mechanics (ie. turf preview for building)
+	var/atom/movable/screen/fullscreen/cursor_catcher/rote_preview/mouse_tracker
 
 /datum/action/innate/rote/New(Target, datum/magick_rote/rote)
 	..(Target)
@@ -24,6 +26,62 @@
 /datum/action/innate/rote/proc/refresh_state()
 	get_desc()
 	build_all_button_icons(UPDATE_BUTTON_NAME)
+
+/datum/action/innate/rote/set_ranged_ability(mob/living/on_who, text_to_show)
+	. = ..()
+	if (!rote || !on_who.client)
+		return
+	mouse_tracker = on_who.overlay_fullscreen("rote_preview", /atom/movable/screen/fullscreen/cursor_catcher/rote_preview, 0)
+	mouse_tracker.assign_to_mob(on_who)
+	mouse_tracker.rote_action = src
+	RegisterSignal(on_who, COMSIG_MOVABLE_MOVED, PROC_REF(on_caster_moved))
+	rote.show_target_previews(on_who, get_turf(on_who), null)
+
+/datum/action/innate/rote/unset_ranged_ability(mob/living/on_who, text_to_show)
+	if (mouse_tracker)
+		on_who.clear_fullscreen("rote_preview", animated = FALSE)
+		mouse_tracker = null
+	UnregisterSignal(on_who, COMSIG_MOVABLE_MOVED)
+	if (rote)
+		rote.clear_target_previews(on_who)
+	. = ..()
+	if (rote?.is_awaiting_target())
+		rote.cancel_cast()
+
+// Called by the rote when execution suspends on a node that needs a crosshair target
+/datum/action/innate/rote/proc/begin_targeting(datum/magick_context/context)
+	var/mob/living/user = owner || context.caster
+	if (isnull(user))
+		rote.cancel_cast()
+		return
+	var/node_id = rote.get_awaiting_target_node()
+	var/datum/rote_node_data/node_data_entry = rote.node_data ? rote.node_data[node_id] : null
+	enable_text = span_notice(MAGICK_TARGET_ENABLE_TEXT(node_data_entry?.label, rote.count_remaining_targets()))
+	if (user.click_intercept == src)
+		to_chat(user, enable_text)
+		rote.show_target_previews(user, mouse_tracker?.given_turf || get_turf(user), mouse_tracker?.get_hovered_atom())
+	else
+		set_ranged_ability(user, enable_text)
+	build_all_button_icons(UPDATE_BUTTON_STATUS)
+
+// Leaves targeting mode without cancelling anything
+/datum/action/innate/rote/proc/stop_targeting()
+	if (owner && owner.click_intercept == src)
+		unset_ranged_ability(owner, disable_text)
+	build_all_button_icons(UPDATE_BUTTON_STATUS)
+
+// Re-center previews whenever caster moves
+/datum/action/innate/rote/proc/on_caster_moved(atom/source, atom/oldloc, dir, forced)
+	SIGNAL_HANDLER
+	if (!rote || !mouse_tracker)
+		return
+	rote.show_target_previews(source, mouse_tracker.given_turf, mouse_tracker.get_hovered_atom())
+
+// Re-centers previews whenever cursor moves
+/datum/action/innate/rote/proc/update_target_preview(turf/mouse_turf, atom/hovered_atom)
+	if (!rote || !owner)
+		return
+	rote.show_target_previews(owner, mouse_turf, hovered_atom)
 
 // Whether the caster can still cancel or force cast the spell
 /datum/action/innate/rote/proc/can_cancel_or_force()
@@ -69,6 +127,11 @@
 	if (isnull(user))
 		return FALSE
 
+	// Clicking the action again while picking a target cancels the cast
+	if (rote.is_awaiting_target())
+		rote.cancel_cast()
+		return TRUE
+
 	if (ROTE_IS_CASTING(rote))
 		// Only the rote currently being focused on responds to cancel/force cast
 		if (can_cancel_or_force())
@@ -85,34 +148,9 @@
 	// Only one rote may be cast at a time, so cancel any other casts
 	var/datum/splat/mage/mage_splat = get_mage_splat(user)
 	if (mage_splat?.active_rote)
-		mage_splat.active_rote.active_context.status = ROTE_INTERRUPT_CANCEL
+		mage_splat.active_rote.cancel_cast()
 
-	// If already in targeting mode, toggle off
-	if (click_action && owner?.click_intercept == src)
-		unset_ranged_ability(user, disable_text)
-		rote.pending_target_nodes = null
-		build_all_button_icons(UPDATE_BUTTON_STATUS)
-		return TRUE
-
-	// Determine which root nodes need target selection
-	var/list/needs_selection = list()
-	for (var/node_id as anything in rote.source_nodes)
-		var/datum/rote_node_data/node_data_entry = rote.node_data ? rote.node_data[node_id] : null
-		var/datum/rote_node/node = node_data_entry?.node
-		if (node?.needs_crosshair)
-			needs_selection += node_id
-
-	if (length(needs_selection))
-		// Enter ranged targeting mode with crosshair cursor
-		rote.pending_target_nodes = needs_selection
-		var/first_id = needs_selection[1]
-		var/datum/rote_node_data/first_data = rote.node_data ? rote.node_data[first_id] : null
-		enable_text = span_notice(MAGICK_TARGET_ENABLE_TEXT(first_data?.label, length(rote.pending_target_nodes)))
-		set_ranged_ability(user, enable_text)
-		build_all_button_icons(UPDATE_BUTTON_STATUS)
-		return TRUE
-
-	// All nodes are self-select, cast directly without targeting mode
+	// Executes the stack until finished, or until a source node suspends it for target selection
 	rote.pre_cast(user)
 	return TRUE
 
@@ -123,49 +161,42 @@
 	var/mob/user = clicker || owner
 	if (isnull(user))
 		return FALSE
-	if (!length(rote.pending_target_nodes))
+	// Nothing is waiting on a target
+	if (!rote.is_awaiting_target())
 		unset_ranged_ability(user)
 		return FALSE
 
-	// Another rote took over the cast while we were targeting
-	var/datum/splat/mage/mage_splat = get_mage_splat(user)
-	if (mage_splat?.active_rote && mage_splat.active_rote != rote)
-		unset_ranged_ability(user)
-		rote.pending_target_nodes = null
-		build_all_button_icons(UPDATE_BUTTON_STATUS)
-		return FALSE
-
-	var/node_id = rote.pending_target_nodes[1]
+	var/datum/magick_context/context = rote.active_context
+	var/node_id = rote.get_awaiting_target_node()
 	var/datum/rote_node_data/node_data_entry = rote.node_data ? rote.node_data[node_id] : null
 	var/datum/rote_node/source/node = node_data_entry?.node
 	if (!istype(node))
-		rote.pending_target_nodes -= node_id
-		return TRUE
+		rote.cancel_cast()
+		return FALSE
 
 	if (!node.is_valid_target(clicked_on, user))
 		to_chat(user, span_warning("That is not a valid target for [node.name]."))
 		return TRUE
 
-	// Assign the clicked atom as the target for the next pending root node
-	rote.pending_target_nodes -= node_id
-	node.push_target(rote, node_id, clicked_on)
-
-	if (length(rote.pending_target_nodes))
-		to_chat(user, span_notice(MAGICK_TARGET_ENABLE_TEXT(node_data_entry?.label, length(rote.pending_target_nodes))))
+	var/atom/target = node.get_clicked_target(clicked_on, user)
+	if (!target)
+		to_chat(user, span_warning("That is not a valid target for [node.name]."))
 		return TRUE
 
-	// Cast when all targets have been assigned
+	// Assign the target to the suspended node, which re-executes from the front of the stack
+	node.push_target(context, node_id, target)
+	// Clear the awaiting state first so leaving targeting mode does not cancel the cast
+	context.status = ROTE_NOT_INTERRUPTED
 	unset_ranged_ability(user)
-	rote.pre_cast(user)
+	build_all_button_icons(UPDATE_BUTTON_STATUS)
+	rote.resume_cast(context)
 	return TRUE
 
 /datum/action/innate/rote/Remove(mob/removed_from)
 	if (removed_from.click_intercept == src)
 		unset_ranged_ability(removed_from)
 	if (rote)
-		rote.pending_target_nodes = null
-		if (ROTE_IS_CASTING(rote))
-			rote.active_context.status = ROTE_INTERRUPT_CANCEL
+		rote.cancel_cast()
 	return ..()
 
 // Only show the focus overlay while this rote is actively casting
@@ -182,7 +213,45 @@
 		current_button.button_overlay = null
 		current_button.active_overlay_icon_state = null
 
-// Temporarily putting this here
+/// ----------------------------------------------------------------------------
+
+// Temporarily putting this here, TODO: will move this somewhere else eventually
+
+/atom/movable/screen/fullscreen/cursor_catcher/rote_preview
+	icon_state = null
+	mouse_opacity = MOUSE_OPACITY_OPAQUE
+	var/datum/action/innate/rote/rote_action
+
+/atom/movable/screen/fullscreen/cursor_catcher/rote_preview/proc/get_hovered_atom()
+	if (!given_turf)
+		return null
+	var/atom/topmost = given_turf
+	for (var/atom/atom_on_turf as anything in given_turf)
+		if (atom_on_turf.mouse_opacity == MOUSE_OPACITY_TRANSPARENT || atom_on_turf.invisibility)
+			continue
+		if (atom_on_turf.layer > topmost.layer)
+			topmost = atom_on_turf
+	return topmost
+
+/atom/movable/screen/fullscreen/cursor_catcher/rote_preview/MouseMove(location, control, params)
+	. = ..()
+	if (usr != owner)
+		return
+	calculate_params()
+	rote_action?.update_target_preview(given_turf, get_hovered_atom())
+
+/atom/movable/screen/fullscreen/cursor_catcher/rote_preview/Click(location, control, params)
+	if (usr != owner)
+		return
+	calculate_params()
+	var/atom/clicked = get_hovered_atom()
+	if (!clicked)
+		return
+	owner.ClickOn(clicked, params)
+
+/// ----------------------------------------------------------------------------
+
+// Temporarily putting this here, TODO: will move this somewhere else eventually
 /datum/storyteller_roll/arete
 	numerical = TRUE
 	roll_output_type = ROLL_PRIVATE
